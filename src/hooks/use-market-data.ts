@@ -206,3 +206,60 @@ export function useRecentTrades(marketId: string, limit = 20, enabled = true) {
     refresh: mutate,
   };
 }
+
+/**
+ * Hook for user positions (portfolio)
+ */
+export function usePositions(marketId?: string, enabled = true) {
+  const url = marketId ? `/api/positions?marketId=${marketId}` : "/api/positions";
+  
+  const { data, error, isLoading, mutate } = useSWR<{
+    positions: {
+      id: string;
+      marketId: string;
+      market: {
+        title: string;
+        slug: string;
+        status: string;
+        resolution: string | null;
+      };
+      yesShares: number;
+      noShares: number;
+      avgYesPrice: number;
+      avgNoPrice: number;
+      currentYesPrice: number;
+      currentNoPrice: number;
+      totalValue: number;
+      totalCost: number;
+      unrealizedPnl: number;
+      realizedPnl: number;
+      potentialPayout: {
+        ifYes: number;
+        ifNo: number;
+      };
+    }[];
+    summary: {
+      totalValue: number;
+      totalCost: number;
+      totalUnrealizedPnl: number;
+      totalRealizedPnl: number;
+      positionCount: number;
+    };
+  }>(
+    enabled ? url : null,
+    authFetcher,
+    {
+      refreshInterval: 10000, // Poll every 10 seconds
+      revalidateOnFocus: true,
+    }
+  );
+
+  return {
+    positions: data?.positions ?? [],
+    summary: data?.summary ?? null,
+    isLoading,
+    isError: !!error,
+    error,
+    refresh: mutate,
+  };
+}

@@ -50,7 +50,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     // Check if user is admin
-    fetch("/api/auth/me")
+    const token = localStorage.getItem("accessToken");
+    if (!token) {
+      router.push("/login?redirect=/admin");
+      setLoading(false);
+      return;
+    }
+
+    fetch("/api/auth/me", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
       .then((res) => res.json())
       .then((data) => {
         if (data.user && (data.user.isAdmin || isAdminEmail(data.user.email))) {

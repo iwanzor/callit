@@ -2,6 +2,7 @@
 
 import { use, useState, useCallback } from "react";
 import Link from "next/link";
+import { useTranslations, useLocale } from "next-intl";
 import { cn } from "@/lib/utils";
 import {
   ArrowLeft,
@@ -24,9 +25,9 @@ const categoryColors: Record<string, string> = {
   other: "bg-gray-500/20 text-gray-400 border-gray-500/30",
 };
 
-function formatDate(dateStr: string | null): string {
+function formatDate(dateStr: string | null, locale: string): string {
   if (!dateStr) return "—";
-  return new Date(dateStr).toLocaleDateString("en-US", {
+  return new Date(dateStr).toLocaleDateString(locale === "sr" ? "sr-RS" : "en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
@@ -41,6 +42,9 @@ export default function MarketDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
+  const t = useTranslations("trading");
+  const tCategories = useTranslations("categories");
+  const locale = useLocale();
   
   // Real-time data hooks
   const { market, isLoading: marketLoading, isError: marketError, refresh: refreshMarket } = useMarketData(id);
@@ -79,11 +83,11 @@ export default function MarketDetailPage({
         : undefined;
 
       if (quantity <= 0) {
-        throw new Error("Please enter a valid quantity");
+        throw new Error(t("enterValidQuantity"));
       }
 
       if (orderType === "limit" && orderPrice && (orderPrice < 0.01 || orderPrice > 0.99)) {
-        throw new Error("Price must be between 0.01 and 0.99");
+        throw new Error(t("priceRange1to99"));
       }
 
       const token = localStorage.getItem("accessToken");
@@ -103,19 +107,19 @@ export default function MarketDetailPage({
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to place order");
+      if (!res.ok) throw new Error(data.error || t("orderFailed"));
 
       const tradesExecuted = data.trades?.length || 0;
       setTradeSuccess(
         tradesExecuted > 0
-          ? `Order placed! ${tradesExecuted} trade(s) executed.`
-          : `Order placed! Status: ${data.order.status}`
+          ? `${t("orderPlaced")} ${tradesExecuted} ${t("tradesExecuted")}`
+          : `${t("orderPlaced")} Status: ${data.order.status}`
       );
 
       setShares("");
       refreshAll();
     } catch (err) {
-      setTradeError(err instanceof Error ? err.message : "Failed to place order");
+      setTradeError(err instanceof Error ? err.message : t("orderFailed"));
     } finally {
       setIsSubmitting(false);
     }
@@ -134,10 +138,10 @@ export default function MarketDetailPage({
   if (marketError || !market) {
     return (
       <div className="text-center py-20">
-        <h2 className="text-2xl font-bold text-white mb-2">Market not found</h2>
-        <p className="text-gray-400 mb-4">The market you're looking for doesn't exist.</p>
+        <h2 className="text-2xl font-bold text-white mb-2">{t("marketNotFound")}</h2>
+        <p className="text-gray-400 mb-4">{t("marketNotFoundDesc")}</p>
         <Link href="/markets" className="text-emerald-400 hover:underline">
-          ← Back to markets
+          ← {t("backToMarkets")}
         </Link>
       </div>
     );
@@ -164,14 +168,14 @@ export default function MarketDetailPage({
           className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back to Markets
+          {t("backToMarkets")}
         </Link>
         <button
           onClick={refreshAll}
           className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition-colors text-sm"
         >
           <RefreshCw className="h-4 w-4" />
-          Refresh
+          {t("refresh")}
         </button>
       </div>
 
@@ -188,18 +192,18 @@ export default function MarketDetailPage({
                     categoryColor
                   )}
                 >
-                  {market.category || "other"}
+                  {tCategories(market.category || "other")}
                 </span>
                 <h1 className="text-2xl font-bold text-white mb-2">{market.title}</h1>
                 <div className="flex items-center gap-4 text-sm text-gray-400">
                   <div className="flex items-center gap-1">
                     <TrendingUp className="h-4 w-4" />
-                    <span>${market.totalVolume.toLocaleString()} volume</span>
+                    <span>${market.totalVolume.toLocaleString()} {t("volume")}</span>
                   </div>
                   {market.closeAt && (
                     <div className="flex items-center gap-1">
                       <Clock className="h-4 w-4" />
-                      <span>Closes {formatDate(market.closeAt)}</span>
+                      <span>{t("closes")} {formatDate(market.closeAt, locale)}</span>
                     </div>
                   )}
                 </div>
@@ -213,7 +217,7 @@ export default function MarketDetailPage({
                       : "bg-red-500/20 text-red-400"
                   )}
                 >
-                  {market.resolution?.toUpperCase()}
+                  {market.resolution === "yes" ? t("yes") : t("no")}
                 </div>
               )}
             </div>
@@ -221,21 +225,21 @@ export default function MarketDetailPage({
             {/* Large price display */}
             <div className="grid grid-cols-2 gap-4 mt-6">
               <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-6 text-center">
-                <p className="text-sm text-emerald-400 font-medium mb-2">YES</p>
+                <p className="text-sm text-emerald-400 font-medium mb-2">{t("yes")}</p>
                 <p className="text-4xl font-bold text-emerald-400">
                   {(market.yesPrice * 100).toFixed(1)}¢
                 </p>
                 <p className="text-xs text-gray-500 mt-2">
-                  {market.totalYesShares.toLocaleString()} shares
+                  {market.totalYesShares.toLocaleString()} {t("sharesCount")}
                 </p>
               </div>
               <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-6 text-center">
-                <p className="text-sm text-red-400 font-medium mb-2">NO</p>
+                <p className="text-sm text-red-400 font-medium mb-2">{t("no")}</p>
                 <p className="text-4xl font-bold text-red-400">
                   {(market.noPrice * 100).toFixed(1)}¢
                 </p>
                 <p className="text-xs text-gray-500 mt-2">
-                  {market.totalNoShares.toLocaleString()} shares
+                  {market.totalNoShares.toLocaleString()} {t("sharesCount")}
                 </p>
               </div>
             </div>
@@ -254,7 +258,7 @@ export default function MarketDetailPage({
             <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
               <h2 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
                 <BookOpen className="h-5 w-5 text-gray-400" />
-                Resolution Criteria
+                {t("resolutionCriteria")}
               </h2>
               <p className="text-gray-300 whitespace-pre-wrap">{market.description}</p>
               {market.resolutionSource && (
@@ -264,7 +268,7 @@ export default function MarketDetailPage({
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1 text-emerald-400 hover:underline mt-3 text-sm"
                 >
-                  Resolution Source <ExternalLink className="h-3 w-3" />
+                  {t("resolutionSource")} <ExternalLink className="h-3 w-3" />
                 </a>
               )}
             </div>
@@ -273,10 +277,10 @@ export default function MarketDetailPage({
           {/* Order Book */}
           <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-white">Order Book</h2>
+              <h2 className="text-lg font-semibold text-white">{t("orderBook")}</h2>
               {summary.spread !== null && (
                 <span className="text-sm text-gray-400">
-                  Spread: {(summary.spread * 100).toFixed(1)}%
+                  {t("spread")}: {(summary.spread * 100).toFixed(1)}%
                 </span>
               )}
             </div>
@@ -285,17 +289,17 @@ export default function MarketDetailPage({
               {/* Bids (YES buyers) */}
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-sm font-medium text-emerald-400">Bids (YES)</h3>
+                  <h3 className="text-sm font-medium text-emerald-400">{t("bidsYes")}</h3>
                   <span className="text-xs text-gray-500">
-                    Depth: {summary.bidDepth.toFixed(0)}
+                    {t("depth")}: {summary.bidDepth.toFixed(0)}
                   </span>
                 </div>
                 {bids.length > 0 ? (
                   <div className="space-y-1">
                     <div className="grid grid-cols-3 text-xs text-gray-500 mb-1 px-2">
-                      <span>Price</span>
-                      <span className="text-right">Qty</span>
-                      <span className="text-right">Orders</span>
+                      <span>{t("price")}</span>
+                      <span className="text-right">{t("qty")}</span>
+                      <span className="text-right">{t("orders")}</span>
                     </div>
                     {bids.slice(0, 8).map((bid, i) => (
                       <div
@@ -322,24 +326,24 @@ export default function MarketDetailPage({
                     ))}
                   </div>
                 ) : (
-                  <p className="text-gray-500 text-sm py-4 text-center">No bids</p>
+                  <p className="text-gray-500 text-sm py-4 text-center">{t("noBids")}</p>
                 )}
               </div>
 
               {/* Asks (YES sellers / NO buyers) */}
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-sm font-medium text-red-400">Asks (NO)</h3>
+                  <h3 className="text-sm font-medium text-red-400">{t("asksNo")}</h3>
                   <span className="text-xs text-gray-500">
-                    Depth: {summary.askDepth.toFixed(0)}
+                    {t("depth")}: {summary.askDepth.toFixed(0)}
                   </span>
                 </div>
                 {asks.length > 0 ? (
                   <div className="space-y-1">
                     <div className="grid grid-cols-3 text-xs text-gray-500 mb-1 px-2">
-                      <span>Price</span>
-                      <span className="text-right">Qty</span>
-                      <span className="text-right">Orders</span>
+                      <span>{t("price")}</span>
+                      <span className="text-right">{t("qty")}</span>
+                      <span className="text-right">{t("orders")}</span>
                     </div>
                     {asks.slice(0, 8).map((ask, i) => (
                       <div
@@ -366,7 +370,7 @@ export default function MarketDetailPage({
                     ))}
                   </div>
                 ) : (
-                  <p className="text-gray-500 text-sm py-4 text-center">No asks</p>
+                  <p className="text-gray-500 text-sm py-4 text-center">{t("noAsks")}</p>
                 )}
               </div>
             </div>
@@ -376,14 +380,14 @@ export default function MarketDetailPage({
         {/* Trade panel */}
         <div className="lg:col-span-1">
           <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 sticky top-8">
-            <h2 className="text-lg font-semibold text-white mb-4">Trade</h2>
+            <h2 className="text-lg font-semibold text-white mb-4">{t("title")}</h2>
 
             {market.status !== "open" ? (
               <div className="text-center py-8">
                 <p className="text-gray-400">
                   {market.status === "resolved"
-                    ? "This market has been resolved"
-                    : "This market is not open for trading"}
+                    ? t("marketResolved")
+                    : t("marketNotOpen")}
                 </p>
               </div>
             ) : (
@@ -400,7 +404,7 @@ export default function MarketDetailPage({
                         : "text-gray-400 hover:text-white"
                     )}
                   >
-                    Buy YES
+                    {t("buyYes")}
                   </button>
                   <button
                     type="button"
@@ -412,7 +416,7 @@ export default function MarketDetailPage({
                         : "text-gray-400 hover:text-white"
                     )}
                   >
-                    Buy NO
+                    {t("buyNo")}
                   </button>
                 </div>
 
@@ -428,7 +432,7 @@ export default function MarketDetailPage({
                         : "bg-gray-800/50 text-gray-400 hover:text-white"
                     )}
                   >
-                    Limit
+                    {t("limit")}
                   </button>
                   <button
                     type="button"
@@ -440,20 +444,20 @@ export default function MarketDetailPage({
                         : "bg-gray-800/50 text-gray-400 hover:text-white"
                     )}
                   >
-                    Market
+                    {t("market")}
                   </button>
                 </div>
 
                 {/* Best bid/ask indicator */}
                 <div className="mb-4 p-2 bg-gray-800/30 rounded-lg">
                   <div className="flex justify-between text-xs">
-                    <span className="text-gray-400">Best Bid</span>
+                    <span className="text-gray-400">{t("bestBid")}</span>
                     <span className="text-emerald-400 font-medium">
                       {bestBid !== null ? `${(bestBid * 100).toFixed(0)}¢` : "—"}
                     </span>
                   </div>
                   <div className="flex justify-between text-xs mt-1">
-                    <span className="text-gray-400">Best Ask</span>
+                    <span className="text-gray-400">{t("bestAsk")}</span>
                     <span className="text-red-400 font-medium">
                       {bestAsk !== null ? `${(bestAsk * 100).toFixed(0)}¢` : "—"}
                     </span>
@@ -464,7 +468,7 @@ export default function MarketDetailPage({
                 {orderType === "limit" && (
                   <div className="mb-4">
                     <label className="block text-sm text-gray-400 mb-2">
-                      Price (¢)
+                      {t("price")} (¢)
                     </label>
                     <input
                       type="number"
@@ -477,19 +481,19 @@ export default function MarketDetailPage({
                       className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500"
                     />
                     <p className="text-xs text-gray-500 mt-1">
-                      Range: 1¢ - 99¢
+                      {t("priceRange")}
                     </p>
                   </div>
                 )}
 
                 {/* Shares input */}
                 <div className="mb-4">
-                  <label className="block text-sm text-gray-400 mb-2">Shares</label>
+                  <label className="block text-sm text-gray-400 mb-2">{t("shares")}</label>
                   <input
                     type="number"
                     value={shares}
                     onChange={(e) => setShares(e.target.value)}
-                    placeholder="Enter number of shares"
+                    placeholder={locale === "sr" ? "Unesite broj akcija" : "Enter number of shares"}
                     min="1"
                     className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500"
                   />
@@ -514,17 +518,17 @@ export default function MarketDetailPage({
                   <div className="mb-4 p-3 bg-gray-800/50 rounded-lg space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span className="text-gray-400">
-                        {orderType === "limit" ? "Max Cost" : "Est. Cost"}
+                        {orderType === "limit" ? t("maxCost") : t("estCost")}
                       </span>
                       <span className="text-white">${estimatedCost.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-400">Potential Return</span>
+                      <span className="text-gray-400">{t("potentialReturn")}</span>
                       <span className="text-emerald-400">+${potentialReturn.toFixed(2)}</span>
                     </div>
                     {estimatedCost > availableBalance && (
                       <p className="text-xs text-red-400">
-                        Insufficient balance (${availableBalance.toFixed(2)} available)
+                        {t("insufficientBalance")} (${availableBalance.toFixed(2)} {t("available")})
                       </p>
                     )}
                   </div>
@@ -556,16 +560,16 @@ export default function MarketDetailPage({
                   {isSubmitting ? (
                     <span className="flex items-center justify-center gap-2">
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      Placing Order...
+                      {t("placingOrder")}
                     </span>
                   ) : (
-                    `Buy ${tradeTab.toUpperCase()} @ ${(currentPrice * 100).toFixed(0)}¢`
+                    `${tradeTab === "yes" ? t("buyYes") : t("buyNo")} @ ${(currentPrice * 100).toFixed(0)}¢`
                   )}
                 </button>
 
                 {availableBalance > 0 && (
                   <p className="text-xs text-gray-500 text-center mt-3">
-                    Available: ${availableBalance.toFixed(2)}
+                    {t("Available")}: ${availableBalance.toFixed(2)}
                   </p>
                 )}
               </form>
