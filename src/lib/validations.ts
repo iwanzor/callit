@@ -31,7 +31,28 @@ export const updateProfileSchema = z.object({
     .optional(),
 });
 
+// Order validations
+export const createOrderSchema = z.object({
+  marketId: z.string().uuid("Invalid market ID"),
+  side: z.enum(["yes", "no"]),
+  type: z.enum(["limit", "market"]),
+  price: z
+    .number()
+    .min(0.01, "Price must be at least 0.01")
+    .max(0.99, "Price must be at most 0.99")
+    .optional(),
+  quantity: z
+    .number()
+    .positive("Quantity must be positive")
+    .max(1000000, "Quantity too large"),
+});
+
+export const cancelOrderSchema = z.object({
+  orderId: z.string().uuid("Invalid order ID"),
+});
+
 // Type exports
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
+export type CreateOrderInput = z.infer<typeof createOrderSchema>;
