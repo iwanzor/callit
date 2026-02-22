@@ -1,6 +1,7 @@
 "use client";
 
-import Link from "next/link";
+import { useTranslations, useLocale } from "next-intl";
+import { Link } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
 import { Clock, TrendingUp } from "lucide-react";
 
@@ -15,6 +16,7 @@ interface Market {
   closeAt: string | null;
   status: string;
   imageUrl?: string | null;
+  locale?: string | null;
 }
 
 interface MarketCardProps {
@@ -27,31 +29,9 @@ const categoryColors: Record<string, string> = {
   crypto: "bg-orange-500/20 text-orange-400 border-orange-500/30",
   economy: "bg-green-500/20 text-green-400 border-green-500/30",
   entertainment: "bg-pink-500/20 text-pink-400 border-pink-500/30",
+  science: "bg-cyan-500/20 text-cyan-400 border-cyan-500/30",
   other: "bg-gray-500/20 text-gray-400 border-gray-500/30",
 };
-
-function formatTimeRemaining(closeAt: string | null): string {
-  if (!closeAt) return "No end date";
-  
-  const now = new Date();
-  const close = new Date(closeAt);
-  const diff = close.getTime() - now.getTime();
-  
-  if (diff < 0) return "Ended";
-  
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-  const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-  
-  if (days > 30) {
-    const months = Math.floor(days / 30);
-    return `${months}mo left`;
-  }
-  if (days > 0) return `${days}d ${hours}h left`;
-  if (hours > 0) return `${hours}h left`;
-  
-  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-  return `${minutes}m left`;
-}
 
 function formatVolume(volume: number): string {
   if (volume >= 1000000) return `$${(volume / 1000000).toFixed(1)}M`;
@@ -60,7 +40,38 @@ function formatVolume(volume: number): string {
 }
 
 export function MarketCard({ market }: MarketCardProps) {
+  const t = useTranslations("trading");
+  const tMarkets = useTranslations("markets");
+  const tCat = useTranslations("categories");
+  const locale = useLocale();
+  
   const categoryColor = categoryColors[market.category || "other"] || categoryColors.other;
+  const categoryKey = market.category || "other";
+  
+  function formatTimeRemaining(closeAt: string | null): string {
+    if (!closeAt) return tMarkets("noEndDate");
+    
+    const now = new Date();
+    const close = new Date(closeAt);
+    const diff = close.getTime() - now.getTime();
+    
+    if (diff < 0) return tMarkets("ended");
+    
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    
+    const leftText = locale === "sr" ? "preostalo" : "left";
+    
+    if (days > 30) {
+      const months = Math.floor(days / 30);
+      return locale === "sr" ? `${months}mes ${leftText}` : `${months}mo ${leftText}`;
+    }
+    if (days > 0) return `${days}d ${hours}h ${leftText}`;
+    if (hours > 0) return `${hours}h ${leftText}`;
+    
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    return `${minutes}${locale === "sr" ? "min" : "m"} ${leftText}`;
+  }
   
   return (
     <Link href={`/markets/${market.id}`}>
@@ -74,7 +85,7 @@ export function MarketCard({ market }: MarketCardProps) {
                 categoryColor
               )}
             >
-              {market.category || "other"}
+              {tCat(categoryKey as "politics")}
             </span>
             <h3 className="text-white font-semibold text-sm leading-tight line-clamp-2 group-hover:text-emerald-400 transition-colors">
               {market.title}
@@ -85,13 +96,13 @@ export function MarketCard({ market }: MarketCardProps) {
         {/* Prices */}
         <div className="grid grid-cols-2 gap-3 mb-4">
           <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3 text-center">
-            <p className="text-xs text-emerald-400 font-medium mb-1">YES</p>
+            <p className="text-xs text-emerald-400 font-medium mb-1">{t("yes")}</p>
             <p className="text-xl font-bold text-emerald-400">
               {(market.yesPrice * 100).toFixed(0)}¢
             </p>
           </div>
           <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 text-center">
-            <p className="text-xs text-red-400 font-medium mb-1">NO</p>
+            <p className="text-xs text-red-400 font-medium mb-1">{t("no")}</p>
             <p className="text-xl font-bold text-red-400">
               {(market.noPrice * 100).toFixed(0)}¢
             </p>
@@ -102,7 +113,7 @@ export function MarketCard({ market }: MarketCardProps) {
         <div className="flex items-center justify-between text-xs text-gray-500">
           <div className="flex items-center gap-1">
             <TrendingUp className="h-3.5 w-3.5" />
-            <span>{formatVolume(market.totalVolume)} Vol</span>
+            <span>{formatVolume(market.totalVolume)} {locale === "sr" ? "Obim" : "Vol"}</span>
           </div>
           <div className="flex items-center gap-1">
             <Clock className="h-3.5 w-3.5" />

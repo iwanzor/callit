@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -13,6 +13,7 @@ import {
   CheckCircle,
   XCircle,
 } from "lucide-react";
+import { getTranslations, getLocale, setRequestLocale } from "next-intl/server";
 
 // Types
 interface Market {
@@ -29,6 +30,7 @@ interface Market {
   closeAt: string | null;
   imageUrl: string | null;
   createdAt: string;
+  locale?: string | null;
 }
 
 interface MarketsResponse {
@@ -42,18 +44,33 @@ interface MarketsResponse {
 }
 
 // Server-side data fetching
-async function getMarkets(status = "open", limit = 6, sortBy = "volume"): Promise<MarketsResponse> {
+async function getMarkets(
+  status = "open",
+  limit = 6,
+  sortBy = "volume",
+  locale?: string
+): Promise<MarketsResponse> {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
   try {
-    const res = await fetch(
-      `${baseUrl}/api/markets?status=${status}&limit=${limit}&sortBy=${sortBy}&sortOrder=desc`,
-      { next: { revalidate: 60 } }
-    );
+    const params = new URLSearchParams({
+      status,
+      limit: String(limit),
+      sortBy,
+      sortOrder: "desc",
+    });
+    if (locale) params.set("locale", locale);
+
+    const res = await fetch(`${baseUrl}/api/markets?${params}`, {
+      next: { revalidate: 60 },
+    });
     if (!res.ok) throw new Error("Failed to fetch markets");
     return res.json();
   } catch (error) {
     console.error("Error fetching markets:", error);
-    return { markets: [], pagination: { total: 0, limit, offset: 0, hasMore: false } };
+    return {
+      markets: [],
+      pagination: { total: 0, limit, offset: 0, hasMore: false },
+    };
   }
 }
 
@@ -68,7 +85,10 @@ async function getResolvedMarkets(): Promise<MarketsResponse> {
     return res.json();
   } catch (error) {
     console.error("Error fetching resolved markets:", error);
-    return { markets: [], pagination: { total: 0, limit: 3, offset: 0, hasMore: false } };
+    return {
+      markets: [],
+      pagination: { total: 0, limit: 3, offset: 0, hasMore: false },
+    };
   }
 }
 
@@ -80,22 +100,22 @@ function formatVolume(volume: number): string {
 }
 
 // Format time remaining
-function formatTimeRemaining(closeAt: string | null): string {
-  if (!closeAt) return "No end date";
+function formatTimeRemaining(closeAt: string | null, t: Awaited<ReturnType<typeof getTranslations>>): string {
+  if (!closeAt) return t("markets.noEndDate");
   const close = new Date(closeAt);
   const now = new Date();
   const diff = close.getTime() - now.getTime();
-  
-  if (diff < 0) return "Ended";
-  
+
+  if (diff < 0) return t("markets.ended");
+
   const days = Math.floor(diff / (1000 * 60 * 60 * 24));
   const months = Math.floor(days / 30);
   const years = Math.floor(days / 365);
-  
+
   if (years > 0) return `${years}y ${months % 12}mo`;
   if (months > 0) return `${months}mo ${days % 30}d`;
   if (days > 0) return `${days}d`;
-  
+
   const hours = Math.floor(diff / (1000 * 60 * 60));
   return `${hours}h`;
 }
@@ -115,53 +135,45 @@ function getCategoryColor(category: string | null): string {
     entertainment: "bg-pink-500/10 text-pink-400 border-pink-500/30",
     science: "bg-cyan-500/10 text-cyan-400 border-cyan-500/30",
   };
-  return colors[category || ""] || "bg-muted text-muted-foreground border-border";
+  return (
+    colors[category || ""] || "bg-muted text-muted-foreground border-border"
+  );
 }
 
-const steps = [
-  {
-    icon: Target,
-    title: "Pick a Market",
-    description:
-      "Browse thousands of markets on politics, sports, crypto, and more. Find questions you have insights on.",
-  },
-  {
-    icon: Zap,
-    title: "Trade YES or NO",
-    description:
-      "Buy shares based on your prediction. Prices reflect real-time market sentiment from 0¢ to $1.",
-  },
-  {
-    icon: Wallet,
-    title: "Cash Out",
-    description:
-      "If you're right, each share pays $1. Sell anytime before resolution or hold until the outcome.",
-  },
-];
-
 // Market Card Component
-function MarketCard({ market }: { market: Market }) {
+function MarketCard({
+  market,
+  t,
+  tCat,
+}: {
+  market: Market;
+  t: Awaited<ReturnType<typeof getTranslations>>;
+  tCat: Awaited<ReturnType<typeof getTranslations>>;
+}) {
   const yesPercent = Math.round(market.yesPrice * 100);
   const noPercent = Math.round(market.noPrice * 100);
   const trending = isTrending(market.totalVolume);
+  const categoryKey = market.category || "other";
 
   return (
     <Link href={`/markets/${market.id}`}>
       <Card className="bg-card border-border/50 hover:border-emerald-500/50 transition-colors cursor-pointer group h-full">
         <CardContent className="p-6">
           <div className="flex items-center gap-2 mb-3 flex-wrap">
-            <span className={`px-2 py-1 rounded-md text-xs font-medium border ${getCategoryColor(market.category)}`}>
-              {market.category?.charAt(0).toUpperCase()}{market.category?.slice(1)}
+            <span
+              className={`px-2 py-1 rounded-md text-xs font-medium border ${getCategoryColor(market.category)}`}
+            >
+              {tCat(categoryKey as "politics")}
             </span>
             {trending && (
               <span className="px-2 py-1 rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/30 text-xs font-medium flex items-center gap-1">
                 <Flame className="w-3 h-3" />
-                Trending
+                {t("markets.trending")}
               </span>
             )}
             <span className="text-xs text-muted-foreground ml-auto flex items-center gap-1">
               <Clock className="w-3 h-3" />
-              {formatTimeRemaining(market.closeAt)}
+              {formatTimeRemaining(market.closeAt, t)}
             </span>
           </div>
 
@@ -171,15 +183,19 @@ function MarketCard({ market }: { market: Market }) {
 
           <div className="mb-4">
             <div className="flex justify-between text-xs mb-1">
-              <span className="text-muted-foreground">Probability</span>
-              <span className="font-medium">{formatVolume(market.totalVolume)} vol</span>
+              <span className="text-muted-foreground">
+                {t("markets.probability")}
+              </span>
+              <span className="font-medium">
+                {formatVolume(market.totalVolume)} {t("markets.volume")}
+              </span>
             </div>
             <div className="h-2 bg-muted rounded-full overflow-hidden flex">
-              <div 
+              <div
                 className="bg-emerald-500 transition-all"
                 style={{ width: `${yesPercent}%` }}
               />
-              <div 
+              <div
                 className="bg-red-500 transition-all"
                 style={{ width: `${noPercent}%` }}
               />
@@ -190,12 +206,12 @@ function MarketCard({ market }: { market: Market }) {
             <Button
               size="sm"
               className={`flex-1 ${
-                yesPercent >= 50 
+                yesPercent >= 50
                   ? "bg-emerald-600/30 hover:bg-emerald-600/40 text-emerald-400 border border-emerald-500/40"
                   : "bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/30"
               }`}
             >
-              YES {yesPercent}¢
+              {t("trading.yes")} {yesPercent}¢
             </Button>
             <Button
               size="sm"
@@ -206,7 +222,7 @@ function MarketCard({ market }: { market: Market }) {
                   : "border-red-500/30 text-red-400 hover:bg-red-600/10"
               }`}
             >
-              NO {noPercent}¢
+              {t("trading.no")} {noPercent}¢
             </Button>
           </div>
         </CardContent>
@@ -216,14 +232,22 @@ function MarketCard({ market }: { market: Market }) {
 }
 
 // Resolved Market Card
-function ResolvedMarketCard({ market }: { market: Market }) {
+function ResolvedMarketCard({
+  market,
+  t,
+}: {
+  market: Market;
+  t: Awaited<ReturnType<typeof getTranslations>>;
+}) {
   const isYes = market.resolution === "yes";
 
   return (
     <Card className="bg-card/50 border-border/50">
       <CardContent className="p-4">
         <div className="flex items-start gap-3">
-          <div className={`p-2 rounded-full ${isYes ? "bg-emerald-500/20" : "bg-red-500/20"}`}>
+          <div
+            className={`p-2 rounded-full ${isYes ? "bg-emerald-500/20" : "bg-red-500/20"}`}
+          >
             {isYes ? (
               <CheckCircle className="w-5 h-5 text-emerald-500" />
             ) : (
@@ -233,11 +257,13 @@ function ResolvedMarketCard({ market }: { market: Market }) {
           <div className="flex-1 min-w-0">
             <p className="font-medium text-sm line-clamp-2">{market.title}</p>
             <div className="flex items-center gap-2 mt-1">
-              <span className={`text-xs font-semibold ${isYes ? "text-emerald-400" : "text-red-400"}`}>
-                Resolved {isYes ? "YES" : "NO"}
+              <span
+                className={`text-xs font-semibold ${isYes ? "text-emerald-400" : "text-red-400"}`}
+              >
+                {isYes ? t("markets.resolvedYes") : t("markets.resolvedNo")}
               </span>
               <span className="text-xs text-muted-foreground">
-                • {formatVolume(market.totalVolume)} volume
+                • {formatVolume(market.totalVolume)} {t("markets.volume")}
               </span>
             </div>
           </div>
@@ -247,14 +273,44 @@ function ResolvedMarketCard({ market }: { market: Market }) {
   );
 }
 
-export default async function LandingPage() {
+export default async function LandingPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  setRequestLocale(locale);
+  
+  const t = await getTranslations();
+  const tCat = await getTranslations("categories");
+
+  // Fetch markets - prioritize locale-specific markets for Serbian
   const [marketsData, resolvedData] = await Promise.all([
-    getMarkets("open", 3, "volume"),
+    getMarkets("open", 3, "volume", locale === "sr" ? "sr" : undefined),
     getResolvedMarkets(),
   ]);
 
-  const totalVolume = marketsData.markets.reduce((sum, m) => sum + m.totalVolume, 0) + 
-                      resolvedData.markets.reduce((sum, m) => sum + m.totalVolume, 0);
+  const totalVolume =
+    marketsData.markets.reduce((sum, m) => sum + m.totalVolume, 0) +
+    resolvedData.markets.reduce((sum, m) => sum + m.totalVolume, 0);
+
+  const steps = [
+    {
+      icon: Target,
+      title: t("landing.step1Title"),
+      description: t("landing.step1Description"),
+    },
+    {
+      icon: Zap,
+      title: t("landing.step2Title"),
+      description: t("landing.step2Description"),
+    },
+    {
+      icon: Wallet,
+      title: t("landing.step3Title"),
+      description: t("landing.step3Description"),
+    },
+  ];
 
   return (
     <div className="flex flex-col">
@@ -268,18 +324,19 @@ export default async function LandingPage() {
           <div className="max-w-3xl mx-auto text-center">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm mb-6">
               <TrendingUp className="w-4 h-4" />
-              <span>Real-time prediction markets</span>
+              <span>{t("landing.badge")}</span>
             </div>
 
             <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-6">
-              Predict the Future.
+              {t("landing.heroTitle")}
               <br />
-              <span className="text-emerald-500">Profit from Knowledge.</span>
+              <span className="text-emerald-500">
+                {t("landing.heroTitleHighlight")}
+              </span>
             </h1>
 
             <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-              Trade on the outcomes of real-world events. From elections to
-              earnings, sports to science—put your predictions to the test.
+              {t("landing.heroDescription")}
             </p>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -288,7 +345,7 @@ export default async function LandingPage() {
                   size="lg"
                   className="bg-emerald-600 hover:bg-emerald-700 text-white px-8 h-12 text-base"
                 >
-                  Start Trading
+                  {t("landing.startTrading")}
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
               </Link>
@@ -298,7 +355,7 @@ export default async function LandingPage() {
                   size="lg"
                   className="px-8 h-12 text-base"
                 >
-                  Explore Markets
+                  {t("landing.exploreMarkets")}
                 </Button>
               </Link>
             </div>
@@ -310,7 +367,7 @@ export default async function LandingPage() {
                   {formatVolume(totalVolume > 0 ? totalVolume : 15000000)}+
                 </div>
                 <div className="text-sm text-muted-foreground">
-                  Trading Volume
+                  {t("landing.tradingVolume")}
                 </div>
               </div>
               <div>
@@ -318,7 +375,7 @@ export default async function LandingPage() {
                   10K+
                 </div>
                 <div className="text-sm text-muted-foreground">
-                  Active Traders
+                  {t("landing.activeTraders")}
                 </div>
               </div>
               <div>
@@ -326,7 +383,7 @@ export default async function LandingPage() {
                   {marketsData.pagination.total || 20}+
                 </div>
                 <div className="text-sm text-muted-foreground">
-                  Live Markets
+                  {t("landing.liveMarkets")}
                 </div>
               </div>
             </div>
@@ -339,10 +396,10 @@ export default async function LandingPage() {
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              How It Works
+              {t("landing.howItWorks")}
             </h2>
             <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-              Start trading predictions in three simple steps
+              {t("landing.howItWorksSubtitle")}
             </p>
           </div>
 
@@ -378,15 +435,15 @@ export default async function LandingPage() {
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
                 </span>
-                Featured Markets
+                {t("landing.featuredMarkets")}
               </h2>
               <p className="text-muted-foreground">
-                Popular predictions trending now
+                {t("landing.featuredMarketsSubtitle")}
               </p>
             </div>
             <Link href="/markets" className="hidden sm:block">
               <Button variant="ghost" className="text-emerald-500">
-                View All
+                {t("landing.viewAll")}
                 <ChevronRight className="w-4 h-4 ml-1" />
               </Button>
             </Link>
@@ -395,14 +452,16 @@ export default async function LandingPage() {
           {marketsData.markets.length > 0 ? (
             <div className="grid md:grid-cols-3 gap-6">
               {marketsData.markets.map((market) => (
-                <MarketCard key={market.id} market={market} />
+                <MarketCard key={market.id} market={market} t={t} tCat={tCat} />
               ))}
             </div>
           ) : (
             <Card className="bg-card/50 border-border/50">
               <CardContent className="py-12 text-center">
                 <TrendingUp className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                <p className="text-muted-foreground">No active markets yet. Check back soon!</p>
+                <p className="text-muted-foreground">
+                  {t("landing.noActiveMarkets")}
+                </p>
               </CardContent>
             </Card>
           )}
@@ -410,7 +469,7 @@ export default async function LandingPage() {
           <div className="mt-8 text-center sm:hidden">
             <Link href="/markets">
               <Button variant="outline">
-                View All Markets
+                {t("landing.viewAllMarkets")}
                 <ChevronRight className="w-4 h-4 ml-1" />
               </Button>
             </Link>
@@ -425,11 +484,15 @@ export default async function LandingPage() {
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-bold flex items-center gap-2">
                 <CheckCircle className="w-5 h-5 text-emerald-500" />
-                Recent Results
+                {t("landing.recentResults")}
               </h2>
               <Link href="/markets?status=resolved">
-                <Button variant="ghost" size="sm" className="gap-1 text-muted-foreground hover:text-foreground">
-                  See all
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="gap-1 text-muted-foreground hover:text-foreground"
+                >
+                  {t("landing.seeAll")}
                   <ChevronRight className="w-4 h-4" />
                 </Button>
               </Link>
@@ -437,7 +500,7 @@ export default async function LandingPage() {
 
             <div className="grid md:grid-cols-3 gap-4">
               {resolvedData.markets.map((market) => (
-                <ResolvedMarketCard key={market.id} market={market} />
+                <ResolvedMarketCard key={market.id} market={market} t={t} />
               ))}
             </div>
           </div>
@@ -448,18 +511,17 @@ export default async function LandingPage() {
       <section className="py-20 bg-gradient-to-b from-background to-emerald-950/20">
         <div className="container mx-auto px-4 text-center">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            Ready to Make Your Predictions?
+            {t("landing.ctaTitle")}
           </h2>
           <p className="text-muted-foreground text-lg mb-8 max-w-xl mx-auto">
-            Join thousands of traders who profit from their knowledge and
-            insights.
+            {t("landing.ctaDescription")}
           </p>
           <Link href="/register">
             <Button
               size="lg"
               className="bg-emerald-600 hover:bg-emerald-700 text-white px-8 h-12 text-base"
             >
-              Create Free Account
+              {t("landing.createAccount")}
               <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
           </Link>

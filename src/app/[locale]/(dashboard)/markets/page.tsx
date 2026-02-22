@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useTranslations, useLocale } from "next-intl";
 import { MarketCard } from "@/components/markets/MarketCard";
 import { cn } from "@/lib/utils";
 import { Search, Filter, Loader2 } from "lucide-react";
@@ -16,25 +17,31 @@ interface Market {
   closeAt: string | null;
   status: string;
   imageUrl?: string | null;
+  locale?: string | null;
 }
 
-const categories = [
-  { value: "", label: "All" },
-  { value: "sports", label: "Sports" },
-  { value: "politics", label: "Politics" },
-  { value: "crypto", label: "Crypto" },
-  { value: "economy", label: "Economy" },
-  { value: "entertainment", label: "Entertainment" },
-  { value: "other", label: "Other" },
-];
-
-const sortOptions = [
-  { value: "createdAt", label: "Newest" },
-  { value: "volume", label: "Volume" },
-  { value: "closeAt", label: "Ending Soon" },
-];
-
 export default function MarketsPage() {
+  const t = useTranslations("markets");
+  const tCat = useTranslations("categories");
+  const tSort = useTranslations("sort");
+  const locale = useLocale();
+
+  const categories = [
+    { value: "", label: tCat("all") },
+    { value: "sports", label: tCat("sports") },
+    { value: "politics", label: tCat("politics") },
+    { value: "crypto", label: tCat("crypto") },
+    { value: "economy", label: tCat("economy") },
+    { value: "entertainment", label: tCat("entertainment") },
+    { value: "other", label: tCat("other") },
+  ];
+
+  const sortOptions = [
+    { value: "createdAt", label: tSort("newest") },
+    { value: "volume", label: tSort("volume") },
+    { value: "closeAt", label: tSort("endingSoon") },
+  ];
+
   const [markets, setMarkets] = useState<Market[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -57,6 +64,8 @@ export default function MarketsPage() {
 
     if (selectedCategory) params.set("category", selectedCategory);
     if (searchQuery) params.set("search", searchQuery);
+    // Add locale for Serbian-specific markets
+    if (locale === "sr") params.set("locale", "sr");
 
     try {
       const res = await fetch(`/api/markets?${params}`);
@@ -75,11 +84,11 @@ export default function MarketsPage() {
     } finally {
       setLoading(false);
     }
-  }, [offset, selectedCategory, searchQuery, sortBy]);
+  }, [offset, selectedCategory, searchQuery, sortBy, locale]);
 
   useEffect(() => {
     fetchMarkets(true);
-  }, [selectedCategory, sortBy]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [selectedCategory, sortBy, locale]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -90,8 +99,8 @@ export default function MarketsPage() {
     <div className="max-w-7xl mx-auto">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white mb-2">Markets</h1>
-        <p className="text-gray-400">Trade on the outcomes of real-world events</p>
+        <h1 className="text-3xl font-bold text-white mb-2">{t("title")}</h1>
+        <p className="text-gray-400">{t("subtitle")}</p>
       </div>
 
       {/* Filters */}
@@ -101,7 +110,7 @@ export default function MarketsPage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-500" />
           <input
             type="text"
-            placeholder="Search markets..."
+            placeholder={t("searchPlaceholder")}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 bg-gray-900 border border-gray-800 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500 transition-colors"
@@ -163,8 +172,8 @@ export default function MarketsPage() {
         </div>
       ) : markets.length === 0 ? (
         <div className="text-center py-20">
-          <p className="text-gray-500 text-lg">No markets found</p>
-          <p className="text-gray-600 text-sm mt-1">Try adjusting your filters</p>
+          <p className="text-gray-500 text-lg">{t("noMarketsFound")}</p>
+          <p className="text-gray-600 text-sm mt-1">{t("adjustFilters")}</p>
         </div>
       ) : (
         <>
@@ -183,7 +192,7 @@ export default function MarketsPage() {
                 className="px-6 py-2.5 bg-gray-800 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 flex items-center gap-2"
               >
                 {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-                Load More
+                {t("loadMore")}
               </button>
             </div>
           )}

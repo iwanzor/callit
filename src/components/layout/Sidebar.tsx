@@ -1,9 +1,11 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useTranslations, useLocale } from "next-intl";
+import { Link } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import {
   BarChart3,
   Briefcase,
@@ -12,6 +14,7 @@ import {
   TrendingUp,
   Menu,
   X,
+  LogOut,
 } from "lucide-react";
 
 interface NavItem {
@@ -20,32 +23,49 @@ interface NavItem {
   icon: React.ComponentType<{ className?: string }>;
 }
 
-const navigation: NavItem[] = [
-  { name: "Markets", href: "/markets", icon: BarChart3 },
-  { name: "Portfolio", href: "/portfolio", icon: Briefcase },
-  { name: "Wallet", href: "/wallet", icon: Wallet },
-  { name: "Settings", href: "/settings", icon: Settings },
-];
-
 export function Sidebar() {
   const pathname = usePathname();
+  const locale = useLocale();
+  const t = useTranslations("nav");
+  const tWallet = useTranslations("wallet");
+  
   const [balance, setBalance] = useState<number | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
 
+  const navigation: NavItem[] = [
+    { name: t("markets"), href: "/markets", icon: BarChart3 },
+    { name: t("portfolio"), href: "/portfolio", icon: Briefcase },
+    { name: t("wallet"), href: "/wallet", icon: Wallet },
+    { name: t("settings"), href: "/settings", icon: Settings },
+  ];
+
   useEffect(() => {
     // Fetch user balance
-    fetch("/api/user/balance")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.balance !== undefined) {
-          setBalance(data.balance);
-        }
+    const token = localStorage.getItem("accessToken");
+    if (token) {
+      fetch("/api/user/balance", {
+        headers: { Authorization: `Bearer ${token}` },
       })
-      .catch(() => {
-        // Use mock balance if not authenticated
-        setBalance(1000.00);
-      });
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.balance !== undefined) {
+            setBalance(data.balance);
+          }
+        })
+        .catch(() => {
+          setBalance(1000.00);
+        });
+    } else {
+      setBalance(1000.00);
+    }
   }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
+    localStorage.removeItem("user");
+    window.location.href = `/${locale}`;
+  };
 
   const SidebarContent = () => (
     <>
@@ -58,10 +78,12 @@ export function Sidebar() {
       {/* Navigation */}
       <nav className="flex-1 px-3 py-4 space-y-1">
         {navigation.map((item) => {
-          const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+          // Check if current path matches this nav item
+          const itemPath = `/${locale}${item.href}`;
+          const isActive = pathname === itemPath || pathname.startsWith(`${itemPath}/`);
           return (
             <Link
-              key={item.name}
+              key={item.href}
               href={item.href}
               onClick={() => setMobileOpen(false)}
               className={cn(
@@ -78,11 +100,16 @@ export function Sidebar() {
         })}
       </nav>
 
+      {/* Language Switcher */}
+      <div className="px-4 py-3 border-t border-gray-800">
+        <LanguageSwitcher className="w-full justify-center" />
+      </div>
+
       {/* Balance Display */}
       <div className="p-4 border-t border-gray-800">
         <div className="bg-gray-800/50 rounded-lg p-4">
           <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">
-            Available Balance
+            {tWallet("availableBalance")}
           </p>
           <p className="text-2xl font-bold text-white">
             ${balance !== null ? balance.toLocaleString("en-US", { minimumFractionDigits: 2 }) : "—"}
@@ -91,9 +118,20 @@ export function Sidebar() {
             href="/wallet"
             className="mt-3 block w-full py-2 px-3 text-center text-sm font-medium bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors"
           >
-            Deposit
+            {tWallet("deposit")}
           </Link>
         </div>
+      </div>
+
+      {/* Logout Button */}
+      <div className="px-4 pb-4">
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-3 px-3 py-2.5 w-full rounded-lg text-sm font-medium text-gray-400 hover:bg-gray-800 hover:text-white transition-colors"
+        >
+          <LogOut className="h-5 w-5" />
+          {t("logout")}
+        </button>
       </div>
     </>
   );

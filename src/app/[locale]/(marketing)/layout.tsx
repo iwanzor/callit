@@ -1,9 +1,11 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslations, useLocale } from "next-intl";
+import { Link } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { TrendingUp } from "lucide-react";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 export default function MarketingLayout({
   children,
@@ -11,7 +13,10 @@ export default function MarketingLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const isAuthPage = pathname === "/login" || pathname === "/register";
+  const locale = useLocale();
+  const t = useTranslations();
+  
+  const isAuthPage = pathname.includes("/login") || pathname.includes("/register");
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -22,15 +27,16 @@ export default function MarketingLayout({
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center">
               <TrendingUp className="w-5 h-5 text-white" />
             </div>
-            <span className="font-bold text-xl tracking-tight">Callit</span>
+            <span className="font-bold text-xl tracking-tight">{t("common.appName")}</span>
           </Link>
 
           <nav className="flex items-center gap-4">
+            <LanguageSwitcher />
             {!isAuthPage && (
               <>
                 <Link href="/login">
                   <Button variant="ghost" size="sm">
-                    Log in
+                    {t("nav.login")}
                   </Button>
                 </Link>
                 <Link href="/register">
@@ -38,7 +44,7 @@ export default function MarketingLayout({
                     size="sm"
                     className="bg-emerald-600 hover:bg-emerald-700 text-white"
                   >
-                    Get Started
+                    {t("nav.register")}
                   </Button>
                 </Link>
               </>
@@ -46,7 +52,7 @@ export default function MarketingLayout({
             {isAuthPage && (
               <Link href="/">
                 <Button variant="ghost" size="sm">
-                  ← Back
+                  ← {t("common.back")}
                 </Button>
               </Link>
             )}
@@ -63,17 +69,17 @@ export default function MarketingLayout({
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2 text-muted-foreground">
               <TrendingUp className="w-4 h-4" />
-              <span className="text-sm">© 2026 Callit. All rights reserved.</span>
+              <span className="text-sm">{t("common.copyright")}</span>
             </div>
             <div className="flex items-center gap-6 text-sm text-muted-foreground">
               <Link href="#" className="hover:text-foreground transition-colors">
-                Terms
+                {t("common.terms")}
               </Link>
               <Link href="#" className="hover:text-foreground transition-colors">
-                Privacy
+                {t("common.privacy")}
               </Link>
               <Link href="#" className="hover:text-foreground transition-colors">
-                Contact
+                {t("common.contact")}
               </Link>
             </div>
           </div>

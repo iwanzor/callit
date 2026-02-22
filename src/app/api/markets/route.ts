@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, markets } from "@/lib/db";
-import { eq, and, like, or, desc, asc, sql } from "drizzle-orm";
+import { eq, and, like, or, desc, asc, sql, isNull } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
 
-const VALID_CATEGORIES = ["sports", "politics", "crypto", "economy", "entertainment", "other"];
+const VALID_CATEGORIES = ["sports", "politics", "crypto", "economy", "entertainment", "science", "other"];
 const VALID_STATUSES = ["draft", "open", "closed", "resolved", "cancelled"];
 
 // GET /api/markets - List markets with filters
@@ -13,6 +13,7 @@ export async function GET(request: NextRequest) {
     const category = searchParams.get("category");
     const status = searchParams.get("status") || "open";
     const search = searchParams.get("search");
+    const locale = searchParams.get("locale"); // Filter by locale (sr, en, etc.)
     const sortBy = searchParams.get("sortBy") || "createdAt";
     const sortOrder = searchParams.get("sortOrder") || "desc";
     const limit = Math.min(parseInt(searchParams.get("limit") || "50"), 100);
@@ -22,7 +23,7 @@ export async function GET(request: NextRequest) {
     const conditions = [];
 
     if (status && VALID_STATUSES.includes(status)) {
-      conditions.push(eq(markets.status, status as any));
+      conditions.push(eq(markets.status, status as "draft" | "open" | "closed" | "resolved" | "cancelled"));
     }
 
     if (category && VALID_CATEGORIES.includes(category)) {
@@ -38,6 +39,17 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Locale filtering: if locale is specified, show locale-specific markets + global markets
+    // Locale-specific markets appear first (handled by ordering)
+    if (locale) {
+      conditions.push(
+        or(
+          eq(markets.locale, locale),
+          isNull(markets.locale)
+        )
+      );
+    }
+
     // Build query
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
@@ -49,12 +61,23 @@ export async function GET(request: NextRequest) {
     const total = Number(countResult[0]?.count || 0);
 
     // Get markets
+    // When locale is specified, prioritize locale-specific markets first
     const orderColumn = sortBy === "volume" ? markets.totalVolume :
                        sortBy === "closeAt" ? markets.closeAt :
                        sortBy === "yesPrice" ? markets.yesPrice :
                        markets.createdAt;
     
     const orderFn = sortOrder === "asc" ? asc : desc;
+
+    // Build the order by clause
+    // If locale is specified, order by locale match first (locale-specific markets come first)
+    const orderByClause = locale 
+      ? [
+          // Locale-specific markets first (where locale matches)
+          sql`CASE WHEN ${markets.locale} = ${locale} THEN 0 ELSE 1 END`,
+          orderFn(orderColumn)
+        ]
+      : [orderFn(orderColumn)];
 
     const marketList = await db
       .select({
@@ -71,11 +94,12 @@ export async function GET(request: NextRequest) {
         totalNoShares: markets.totalNoShares,
         closeAt: markets.closeAt,
         imageUrl: markets.imageUrl,
+        locale: markets.locale,
         createdAt: markets.createdAt,
       })
       .from(markets)
       .where(whereClause)
-      .orderBy(orderFn(orderColumn))
+      .orderBy(...orderByClause)
       .limit(limit)
       .offset(offset);
 
@@ -111,7 +135,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { title, description, category, closeAt, resolveAt, imageUrl } = body;
+    const { title, description, category, closeAt, resolveAt, imageUrl, locale } = body;
 
     // Validation
     if (!title || typeof title !== "string" || title.length < 10) {
@@ -155,6 +179,7 @@ export async function POST(request: NextRequest) {
       closeAt: closeAt ? new Date(closeAt) : null,
       resolveAt: resolveAt ? new Date(resolveAt) : null,
       imageUrl: imageUrl || null,
+      locale: locale || null,
       createdBy,
     });
 

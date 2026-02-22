@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
+import { useTranslations, useLocale } from "next-intl";
+import { Link } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,6 +19,10 @@ import { TrendingUp, Loader2, AlertCircle, Check } from "lucide-react";
 
 export default function RegisterPage() {
   const router = useRouter();
+  const locale = useLocale();
+  const t = useTranslations("auth");
+  const tCommon = useTranslations("common");
+  
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -37,12 +42,16 @@ export default function RegisterPage() {
     setError("");
 
     if (!acceptTerms) {
-      setError("You must accept the terms and conditions");
+      setError(locale === "sr" 
+        ? "Morate prihvatiti uslove korišćenja" 
+        : "You must accept the terms and conditions");
       return;
     }
 
     if (password !== confirmPassword) {
-      setError("Passwords do not match");
+      setError(locale === "sr" 
+        ? "Lozinke se ne podudaraju" 
+        : "Passwords do not match");
       return;
     }
 
@@ -59,15 +68,14 @@ export default function RegisterPage() {
 
       if (!res.ok) {
         if (data.details?.fieldErrors) {
-          // Handle Zod validation errors
           const fieldErrors = data.details.fieldErrors;
           const firstError =
             fieldErrors.email?.[0] ||
             fieldErrors.password?.[0] ||
-            "Validation failed";
+            t("registrationFailed");
           setError(firstError);
         } else {
-          setError(data.error || "Registration failed");
+          setError(data.error || t("registrationFailed"));
         }
         setIsLoading(false);
         return;
@@ -78,10 +86,10 @@ export default function RegisterPage() {
       localStorage.setItem("refreshToken", data.refreshToken);
       localStorage.setItem("user", JSON.stringify(data.user));
 
-      // Redirect to markets
-      router.push("/markets");
+      // Redirect to markets with locale
+      router.push(`/${locale}/markets`);
     } catch {
-      setError("Something went wrong. Please try again.");
+      setError(t("registrationFailed"));
       setIsLoading(false);
     }
   };
@@ -114,9 +122,9 @@ export default function RegisterPage() {
               <TrendingUp className="w-7 h-7 text-white" />
             </div>
           </div>
-          <CardTitle className="text-2xl">Create your account</CardTitle>
+          <CardTitle className="text-2xl">{t("createAccount")}</CardTitle>
           <CardDescription>
-            Start trading predictions in minutes
+            {t("createAccountSubtitle")}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -129,11 +137,11 @@ export default function RegisterPage() {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t("email")}</Label>
               <Input
                 id="email"
                 type="email"
-                placeholder="you@example.com"
+                placeholder={t("emailPlaceholder")}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -142,11 +150,11 @@ export default function RegisterPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">{t("password")}</Label>
               <Input
                 id="password"
                 type="password"
-                placeholder="••••••••"
+                placeholder={t("passwordPlaceholder")}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -155,25 +163,29 @@ export default function RegisterPage() {
               {password.length > 0 && (
                 <div className="grid grid-cols-2 gap-2 mt-2">
                   <PasswordCheck valid={hasMinLength}>
-                    8+ characters
+                    {locale === "sr" ? "8+ karaktera" : "8+ characters"}
                   </PasswordCheck>
                   <PasswordCheck valid={hasLowercase}>
-                    Lowercase letter
+                    {locale === "sr" ? "Malo slovo" : "Lowercase letter"}
                   </PasswordCheck>
                   <PasswordCheck valid={hasUppercase}>
-                    Uppercase letter
+                    {locale === "sr" ? "Veliko slovo" : "Uppercase letter"}
                   </PasswordCheck>
-                  <PasswordCheck valid={hasNumber}>Number</PasswordCheck>
+                  <PasswordCheck valid={hasNumber}>
+                    {locale === "sr" ? "Broj" : "Number"}
+                  </PasswordCheck>
                 </div>
               )}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm Password</Label>
+              <Label htmlFor="confirmPassword">
+                {locale === "sr" ? "Potvrdi lozinku" : "Confirm Password"}
+              </Label>
               <Input
                 id="confirmPassword"
                 type="password"
-                placeholder="••••••••"
+                placeholder={t("passwordPlaceholder")}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
@@ -198,20 +210,41 @@ export default function RegisterPage() {
                 htmlFor="terms"
                 className="text-sm text-muted-foreground font-normal leading-relaxed cursor-pointer"
               >
-                I agree to the{" "}
-                <Link
-                  href="#"
-                  className="text-emerald-500 hover:text-emerald-400"
-                >
-                  Terms of Service
-                </Link>{" "}
-                and{" "}
-                <Link
-                  href="#"
-                  className="text-emerald-500 hover:text-emerald-400"
-                >
-                  Privacy Policy
-                </Link>
+                {locale === "sr" ? (
+                  <>
+                    Prihvatam{" "}
+                    <Link
+                      href="#"
+                      className="text-emerald-500 hover:text-emerald-400"
+                    >
+                      Uslove korišćenja
+                    </Link>{" "}
+                    i{" "}
+                    <Link
+                      href="#"
+                      className="text-emerald-500 hover:text-emerald-400"
+                    >
+                      Politiku privatnosti
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    I agree to the{" "}
+                    <Link
+                      href="#"
+                      className="text-emerald-500 hover:text-emerald-400"
+                    >
+                      Terms of Service
+                    </Link>{" "}
+                    and{" "}
+                    <Link
+                      href="#"
+                      className="text-emerald-500 hover:text-emerald-400"
+                    >
+                      Privacy Policy
+                    </Link>
+                  </>
+                )}
               </Label>
             </div>
 
@@ -231,21 +264,21 @@ export default function RegisterPage() {
               {isLoading ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Creating account...
+                  {t("creatingAccount")}
                 </>
               ) : (
-                "Create account"
+                t("createAccountBtn")
               )}
             </Button>
           </form>
 
           <div className="mt-6 text-center text-sm text-muted-foreground">
-            Already have an account?{" "}
+            {t("haveAccount")}{" "}
             <Link
               href="/login"
               className="text-emerald-500 hover:text-emerald-400 font-medium"
             >
-              Sign in
+              {t("signInLink")}
             </Link>
           </div>
         </CardContent>

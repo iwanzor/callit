@@ -44,8 +44,8 @@ function randomPrice(min = 0.15, max = 0.85): string {
   return (Math.random() * (max - min) + min).toFixed(2);
 }
 
-// Market data
-const marketData = [
+// Global market data (shown for all locales)
+const globalMarketData = [
   // Politics
   {
     title: "Will Donald Trump win the 2028 US Presidential Election?",
@@ -239,6 +239,127 @@ const marketData = [
   },
 ];
 
+// Serbian-specific market data
+const serbianMarketData = [
+  // Sports - Very popular in Serbia
+  {
+    title: "Hoće li Crvena zvezda osvojiti Superligu Srbije 2025/26?",
+    description: "Ovo tržište se razrešava u DA ako FK Crvena zvezda osvoji titulu Superlige Srbije u sezoni 2025/26.",
+    category: "sports",
+    yesPrice: "0.65",
+    totalVolume: randomVolume(200000, 800000),
+    closeAt: new Date("2026-05-31T00:00:00Z"),
+    resolveAt: new Date("2026-06-05T00:00:00Z"),
+    locale: "sr",
+  },
+  {
+    title: "Hoće li Partizan proći grupnu fazu Lige šampiona 2025/26?",
+    description: "Razrešava se u DA ako FK Partizan prođe grupnu fazu UEFA Lige šampiona u sezoni 2025/26.",
+    category: "sports",
+    yesPrice: "0.35",
+    totalVolume: randomVolume(150000, 500000),
+    closeAt: new Date("2025-12-15T00:00:00Z"),
+    resolveAt: new Date("2025-12-20T00:00:00Z"),
+    locale: "sr",
+  },
+  {
+    title: "Hoće li Novak Đoković osvojiti još jedan Grand Slam u 2026?",
+    description: "Ovo tržište se razrešava u DA ako Novak Đoković osvoji bilo koji od četiri Grand Slam turnira (Australian Open, Roland Garros, Wimbledon, US Open) u 2026. godini.",
+    category: "sports",
+    yesPrice: "0.45",
+    totalVolume: randomVolume(500000, 1500000),
+    closeAt: new Date("2026-09-15T00:00:00Z"),
+    resolveAt: new Date("2026-09-20T00:00:00Z"),
+    locale: "sr",
+  },
+  {
+    title: "Hoće li Srbija proći grupnu fazu Svetskog prvenstva 2026?",
+    description: "Razrešava se u DA ako fudbalska reprezentacija Srbije prođe grupnu fazu FIFA Svetskog prvenstva 2026 koje se održava u SAD, Kanadi i Meksiku.",
+    category: "sports",
+    yesPrice: "0.55",
+    totalVolume: randomVolume(400000, 1200000),
+    closeAt: new Date("2026-06-25T00:00:00Z"),
+    resolveAt: new Date("2026-06-30T00:00:00Z"),
+    locale: "sr",
+  },
+  {
+    title: "Hoće li Nikola Jokić osvojiti MVP NBA 2025/26?",
+    description: "Ovo tržište se razrešava u DA ako Nikola Jokić bude proglašen za najkorisnijeg igrača (MVP) NBA lige za sezonu 2025/26.",
+    category: "sports",
+    yesPrice: "0.40",
+    totalVolume: randomVolume(300000, 1000000),
+    closeAt: new Date("2026-05-01T00:00:00Z"),
+    resolveAt: new Date("2026-05-10T00:00:00Z"),
+    locale: "sr",
+  },
+
+  // Politics
+  {
+    title: "Hoće li biti prevremenih izbora u Srbiji u 2026?",
+    description: "Razrešava se u DA ako se u Srbiji održe prevremeni parlamentarni izbori bilo kada u 2026. godini.",
+    category: "politics",
+    yesPrice: "0.30",
+    totalVolume: randomVolume(100000, 400000),
+    closeAt: new Date("2026-12-31T00:00:00Z"),
+    resolveAt: new Date("2027-01-05T00:00:00Z"),
+    locale: "sr",
+  },
+  {
+    title: "Hoće li Srbija otvoriti novo poglavlje u EU pregovorima u 2026?",
+    description: "Ovo tržište se razrešava u DA ako Srbija otvori bilo koje novo poglavlje u pristupnim pregovorima sa Evropskom unijom tokom 2026. godine.",
+    category: "politics",
+    yesPrice: "0.35",
+    totalVolume: randomVolume(80000, 300000),
+    closeAt: new Date("2026-12-31T00:00:00Z"),
+    resolveAt: new Date("2027-01-10T00:00:00Z"),
+    locale: "sr",
+  },
+
+  // Economy
+  {
+    title: "Hoće li prosečna plata u Srbiji preći 1000€ u 2026?",
+    description: "Razrešava se u DA ako zvanična prosečna neto plata u Srbiji pređe 1000 evra mesečno (po srednjem kursu NBS) bilo kada u 2026. godini.",
+    category: "economy",
+    yesPrice: "0.55",
+    totalVolume: randomVolume(150000, 500000),
+    closeAt: new Date("2026-12-31T00:00:00Z"),
+    resolveAt: new Date("2027-01-15T00:00:00Z"),
+    locale: "sr",
+  },
+  {
+    title: "Hoće li evro koštati više od 120 dinara krajem 2026?",
+    description: "Ovo tržište se razrešava u DA ako srednji kurs evra prema dinaru bude veći od 120 RSD na dan 31. decembra 2026. prema zvaničnoj kursnoj listi NBS.",
+    category: "economy",
+    yesPrice: "0.25",
+    totalVolume: randomVolume(100000, 400000),
+    closeAt: new Date("2026-12-31T00:00:00Z"),
+    resolveAt: new Date("2027-01-02T00:00:00Z"),
+    locale: "sr",
+  },
+  {
+    title: "Hoće li inflacija u Srbiji pasti ispod 4% u 2026?",
+    description: "Razrešava se u DA ako godišnja stopa inflacije u Srbiji padne ispod 4% za bilo koji mesec u 2026. godini, prema zvaničnim podacima RZS.",
+    category: "economy",
+    yesPrice: "0.60",
+    totalVolume: randomVolume(80000, 300000),
+    closeAt: new Date("2026-12-31T00:00:00Z"),
+    resolveAt: new Date("2027-01-20T00:00:00Z"),
+    locale: "sr",
+  },
+
+  // Entertainment
+  {
+    title: "Hoće li srpski film osvojiti nagradu na velikom filmskom festivalu u 2026?",
+    description: "Ovo tržište se razrešava u DA ako bilo koji srpski film osvoji nagradu na jednom od tri velika filmska festivala (Kan, Venecija, Berlin) u 2026. godini.",
+    category: "entertainment",
+    yesPrice: "0.20",
+    totalVolume: randomVolume(50000, 200000),
+    closeAt: new Date("2026-09-15T00:00:00Z"),
+    resolveAt: new Date("2026-09-20T00:00:00Z"),
+    locale: "sr",
+  },
+];
+
 // Seed users
 async function seedUsers() {
   console.log("🌱 Seeding users...");
@@ -301,7 +422,9 @@ async function seedMarkets(adminId: string) {
 
   const createdMarkets: { id: string; title: string; yesPrice: string }[] = [];
 
-  for (const market of marketData) {
+  // Seed global markets
+  console.log("  📌 Global markets:");
+  for (const market of globalMarketData) {
     const slug = generateSlug(market.title);
     
     // Check if market already exists
@@ -325,10 +448,44 @@ async function seedMarkets(adminId: string) {
         createdBy: adminId,
       });
       createdMarkets.push({ id, title: market.title, yesPrice: market.yesPrice });
-      console.log(`  ✅ Created: ${market.title.slice(0, 50)}...`);
+      console.log(`    ✅ Created: ${market.title.slice(0, 50)}...`);
     } else {
       createdMarkets.push({ id: existing[0].id, title: market.title, yesPrice: market.yesPrice });
-      console.log(`  ⏭️  Already exists: ${market.title.slice(0, 50)}...`);
+      console.log(`    ⏭️  Already exists: ${market.title.slice(0, 50)}...`);
+    }
+  }
+
+  // Seed Serbian markets
+  console.log("  🇷🇸 Serbian markets:");
+  for (const market of serbianMarketData) {
+    const slug = generateSlug(market.title);
+    
+    // Check if market already exists
+    const existing = await db.select().from(markets).where(eq(markets.slug, slug)).limit(1);
+    
+    if (existing.length === 0) {
+      const id = uuidv4();
+      await db.insert(markets).values({
+        id,
+        slug,
+        title: market.title,
+        description: market.description,
+        category: market.category,
+        status: "open",
+        yesPrice: market.yesPrice,
+        totalVolume: market.totalVolume,
+        totalYesShares: (parseFloat(market.totalVolume) * 0.6).toFixed(2),
+        totalNoShares: (parseFloat(market.totalVolume) * 0.4).toFixed(2),
+        closeAt: market.closeAt,
+        resolveAt: market.resolveAt,
+        locale: market.locale,
+        createdBy: adminId,
+      });
+      createdMarkets.push({ id, title: market.title, yesPrice: market.yesPrice });
+      console.log(`    ✅ Created: ${market.title.slice(0, 50)}...`);
+    } else {
+      createdMarkets.push({ id: existing[0].id, title: market.title, yesPrice: market.yesPrice });
+      console.log(`    ⏭️  Already exists: ${market.title.slice(0, 50)}...`);
     }
   }
 
@@ -487,7 +644,8 @@ async function main() {
     console.log(`
 📊 Summary:
    - 2 users (admin@callit.io, demo@callit.io)
-   - ${marketData.length} active markets
+   - ${globalMarketData.length} global markets
+   - ${serbianMarketData.length} Serbian markets
    - 1 resolved market
    - Positions and orders for demo user
    

@@ -1,18 +1,17 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { jwtVerify } from "jose";
+import createIntlMiddleware from "next-intl/middleware";
+import { routing } from "./i18n/routing";
+
+// Create the i18n middleware
+const intlMiddleware = createIntlMiddleware(routing);
 
 // Routes that require authentication
-const protectedApiRoutes = [
-  "/api/user/",
-  "/api/orders/",
-  "/api/positions/",
-];
+const protectedApiRoutes = ["/api/user/", "/api/orders/", "/api/positions/"];
 
 // Routes that require admin
-const adminApiRoutes = [
-  "/api/admin/",
-];
+const adminApiRoutes = ["/api/admin/"];
 
 function getJwtSecret(): Uint8Array {
   const secret = process.env.JWT_SECRET;
@@ -32,60 +31,67 @@ function extractBearerToken(authHeader: string | null): string | null {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Check if route is protected
-  const isProtectedApi = protectedApiRoutes.some((route) =>
-    pathname.startsWith(route)
-  );
-  const isAdminApi = adminApiRoutes.some((route) =>
-    pathname.startsWith(route)
-  );
-
-  if (!isProtectedApi && !isAdminApi) {
-    return NextResponse.next();
-  }
-
-  // Get token from header
-  const authHeader = request.headers.get("Authorization");
-  const token = extractBearerToken(authHeader);
-
-  if (!token) {
-    return NextResponse.json(
-      { error: "Authentication required" },
-      { status: 401 }
+  // Handle API routes separately (no i18n for API)
+  if (pathname.startsWith("/api/")) {
+    // Check if route is protected
+    const isProtectedApi = protectedApiRoutes.some((route) =>
+      pathname.startsWith(route)
     );
-  }
+    const isAdminApi = adminApiRoutes.some((route) =>
+      pathname.startsWith(route)
+    );
 
-  try {
-    // Verify token
-    const { payload } = await jwtVerify(token, getJwtSecret());
+    if (!isProtectedApi && !isAdminApi) {
+      return NextResponse.next();
+    }
 
-    // Check admin access
-    if (isAdminApi && !payload.isAdmin) {
+    // Get token from header
+    const authHeader = request.headers.get("Authorization");
+    const token = extractBearerToken(authHeader);
+
+    if (!token) {
       return NextResponse.json(
-        { error: "Admin access required" },
-        { status: 403 }
+        { error: "Authentication required" },
+        { status: 401 }
       );
     }
 
-    // Add user info to headers for downstream handlers
-    const requestHeaders = new Headers(request.headers);
-    requestHeaders.set("x-user-id", payload.sub as string);
-    requestHeaders.set("x-user-email", payload.email as string);
-    requestHeaders.set("x-user-is-admin", String(payload.isAdmin));
+    try {
+      // Verify token
+      const { payload } = await jwtVerify(token, getJwtSecret());
 
-    return NextResponse.next({
-      request: {
-        headers: requestHeaders,
-      },
-    });
-  } catch {
-    return NextResponse.json(
-      { error: "Invalid or expired token" },
-      { status: 401 }
-    );
+      // Check admin access
+      if (isAdminApi && !payload.isAdmin) {
+        return NextResponse.json(
+          { error: "Admin access required" },
+          { status: 403 }
+        );
+      }
+
+      // Add user info to headers for downstream handlers
+      const requestHeaders = new Headers(request.headers);
+      requestHeaders.set("x-user-id", payload.sub as string);
+      requestHeaders.set("x-user-email", payload.email as string);
+      requestHeaders.set("x-user-is-admin", String(payload.isAdmin));
+
+      return NextResponse.next({
+        request: {
+          headers: requestHeaders,
+        },
+      });
+    } catch {
+      return NextResponse.json(
+        { error: "Invalid or expired token" },
+        { status: 401 }
+      );
+    }
   }
+
+  // For all other routes, apply i18n middleware
+  return intlMiddleware(request);
 }
 
 export const config = {
-  matcher: ["/api/:path*"],
+  // Match all paths except static files and _next
+  matcher: ["/((?!_next|.*\\..*).*)"],
 };

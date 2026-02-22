@@ -84,6 +84,7 @@ export const markets = mysqlTable(
     resolvedAtActual: timestamp("resolved_at_actual"),
     resolutionSource: text("resolution_source"),
     imageUrl: varchar("image_url", { length: 500 }),
+    locale: varchar("locale", { length: 10 }), // en, sr, etc. - for region-specific markets
     createdBy: varchar("created_by", { length: 36 }).notNull(),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow().onUpdateNow(),

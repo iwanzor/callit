@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations, useLocale } from "next-intl";
 import {
   Wallet,
   ArrowUpRight,
@@ -24,17 +25,21 @@ interface Transaction {
   createdAt: string;
 }
 
-const TYPE_STYLES = {
-  deposit: { bg: "bg-emerald-500/10", text: "text-emerald-400", icon: ArrowDownRight, label: "Deposit" },
-  withdrawal: { bg: "bg-red-500/10", text: "text-red-400", icon: ArrowUpRight, label: "Withdrawal" },
-  trade_buy: { bg: "bg-blue-500/10", text: "text-blue-400", icon: TrendingUp, label: "Buy" },
-  trade_sell: { bg: "bg-purple-500/10", text: "text-purple-400", icon: TrendingUp, label: "Sell" },
-  payout: { bg: "bg-yellow-500/10", text: "text-yellow-400", icon: Gift, label: "Payout" },
-  fee: { bg: "bg-gray-500/10", text: "text-gray-400", icon: DollarSign, label: "Fee" },
-  refund: { bg: "bg-cyan-500/10", text: "text-cyan-400", icon: RefreshCw, label: "Refund" },
-};
-
 export default function WalletPage() {
+  const t = useTranslations("wallet");
+  const tCommon = useTranslations("common");
+  const locale = useLocale();
+
+  const TYPE_STYLES = {
+    deposit: { bg: "bg-emerald-500/10", text: "text-emerald-400", icon: ArrowDownRight, label: t("deposit") },
+    withdrawal: { bg: "bg-red-500/10", text: "text-red-400", icon: ArrowUpRight, label: t("withdraw") },
+    trade_buy: { bg: "bg-blue-500/10", text: "text-blue-400", icon: TrendingUp, label: locale === "sr" ? "Kupovina" : "Buy" },
+    trade_sell: { bg: "bg-purple-500/10", text: "text-purple-400", icon: TrendingUp, label: locale === "sr" ? "Prodaja" : "Sell" },
+    payout: { bg: "bg-yellow-500/10", text: "text-yellow-400", icon: Gift, label: locale === "sr" ? "Isplata" : "Payout" },
+    fee: { bg: "bg-gray-500/10", text: "text-gray-400", icon: DollarSign, label: locale === "sr" ? "Naknada" : "Fee" },
+    refund: { bg: "bg-cyan-500/10", text: "text-cyan-400", icon: RefreshCw, label: locale === "sr" ? "Povraćaj" : "Refund" },
+  };
+
   const [balance, setBalance] = useState<number | null>(null);
   const [frozenBalance, setFrozenBalance] = useState<number>(0);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -47,8 +52,13 @@ export default function WalletPage() {
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState("");
 
+  const getAuthHeader = (): Record<string, string> => {
+    const token = localStorage.getItem("accessToken");
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  };
+
   const fetchBalance = () => {
-    fetch("/api/user/balance")
+    fetch("/api/user/balance", { headers: getAuthHeader() })
       .then((res) => res.json())
       .then((data) => {
         setBalance(data.balance ?? 0);
@@ -61,7 +71,7 @@ export default function WalletPage() {
 
   const fetchTransactions = () => {
     setLoadingTx(true);
-    fetch("/api/wallet/transactions")
+    fetch("/api/wallet/transactions", { headers: getAuthHeader() })
       .then((res) => res.json())
       .then((data) => {
         setTransactions(data.transactions || []);
@@ -85,7 +95,7 @@ export default function WalletPage() {
     try {
       const res = await fetch("/api/wallet/deposit", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAuthHeader() },
         body: JSON.stringify({ amount: parseFloat(amount) }),
       });
 
@@ -97,10 +107,10 @@ export default function WalletPage() {
         fetchBalance();
         fetchTransactions();
       } else {
-        setError(data.error || "Failed to process deposit");
+        setError(data.error || (locale === "sr" ? "Greška pri uplati" : "Failed to process deposit"));
       }
     } catch {
-      setError("Failed to process deposit");
+      setError(locale === "sr" ? "Greška pri uplati" : "Failed to process deposit");
     } finally {
       setProcessing(false);
     }
@@ -114,7 +124,7 @@ export default function WalletPage() {
     try {
       const res = await fetch("/api/wallet/withdraw", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAuthHeader() },
         body: JSON.stringify({ amount: parseFloat(amount) }),
       });
 
@@ -126,10 +136,10 @@ export default function WalletPage() {
         fetchBalance();
         fetchTransactions();
       } else {
-        setError(data.error || "Failed to process withdrawal");
+        setError(data.error || (locale === "sr" ? "Greška pri isplati" : "Failed to process withdrawal"));
       }
     } catch {
-      setError("Failed to process withdrawal");
+      setError(locale === "sr" ? "Greška pri isplati" : "Failed to process withdrawal");
     } finally {
       setProcessing(false);
     }
@@ -140,26 +150,26 @@ export default function WalletPage() {
   return (
     <div className="max-w-4xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white mb-2">Wallet</h1>
-        <p className="text-gray-400">Manage your funds</p>
+        <h1 className="text-3xl font-bold text-white mb-2">{t("title")}</h1>
+        <p className="text-gray-400">{t("subtitle")}</p>
       </div>
 
       {/* Balance cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-          <p className="text-sm text-gray-400 mb-1">Available Balance</p>
+          <p className="text-sm text-gray-400 mb-1">{t("availableBalance")}</p>
           <p className="text-3xl font-bold text-white">
             ${availableBalance.toLocaleString("en-US", { minimumFractionDigits: 2 })}
           </p>
         </div>
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-          <p className="text-sm text-gray-400 mb-1">In Open Orders</p>
+          <p className="text-sm text-gray-400 mb-1">{t("frozenBalance")}</p>
           <p className="text-3xl font-bold text-yellow-400">
             ${frozenBalance.toLocaleString("en-US", { minimumFractionDigits: 2 })}
           </p>
         </div>
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-          <p className="text-sm text-gray-400 mb-1">Total Balance</p>
+          <p className="text-sm text-gray-400 mb-1">{locale === "sr" ? "Ukupan balans" : "Total Balance"}</p>
           <p className="text-3xl font-bold text-emerald-400">
             ${balance !== null ? balance.toLocaleString("en-US", { minimumFractionDigits: 2 }) : "—"}
           </p>
@@ -177,7 +187,7 @@ export default function WalletPage() {
           className="flex items-center justify-center gap-2 py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-semibold transition-colors"
         >
           <ArrowDownRight className="h-5 w-5" />
-          Deposit
+          {t("deposit")}
         </button>
         <button
           onClick={() => {
@@ -188,7 +198,7 @@ export default function WalletPage() {
           className="flex items-center justify-center gap-2 py-4 bg-gray-800 hover:bg-gray-700 text-white rounded-xl font-semibold transition-colors"
         >
           <ArrowUpRight className="h-5 w-5" />
-          Withdraw
+          {t("withdraw")}
         </button>
       </div>
 
@@ -196,7 +206,7 @@ export default function WalletPage() {
       <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
         <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
           <History className="h-5 w-5 text-gray-400" />
-          Transaction History
+          {t("transactions")}
         </h2>
         
         {loadingTx ? (
@@ -206,7 +216,7 @@ export default function WalletPage() {
         ) : transactions.length === 0 ? (
           <div className="text-center py-8">
             <Wallet className="h-12 w-12 text-gray-600 mx-auto mb-3" />
-            <p className="text-gray-400">No transactions yet</p>
+            <p className="text-gray-400">{t("noTransactions")}</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -229,7 +239,7 @@ export default function WalletPage() {
                         {style.label}
                       </p>
                       <p className="text-xs text-gray-500">
-                        {new Date(tx.createdAt).toLocaleString()}
+                        {new Date(tx.createdAt).toLocaleString(locale === "sr" ? "sr-RS" : "en-US")}
                       </p>
                     </div>
                   </div>
@@ -246,7 +256,7 @@ export default function WalletPage() {
                       })}
                     </p>
                     <p className="text-xs text-gray-500">
-                      Balance: ${tx.balanceAfter.toLocaleString("en-US", {
+                      {locale === "sr" ? "Balans" : "Balance"}: ${tx.balanceAfter.toLocaleString("en-US", {
                         minimumFractionDigits: 2,
                       })}
                     </p>
@@ -263,7 +273,7 @@ export default function WalletPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 w-full max-w-md mx-4">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-white">Deposit Funds</h2>
+              <h2 className="text-xl font-bold text-white">{t("depositFunds")}</h2>
               <button
                 onClick={() => setShowDepositModal(false)}
                 className="p-1 text-gray-400 hover:text-white"
@@ -273,13 +283,15 @@ export default function WalletPage() {
             </div>
             
             <p className="text-sm text-gray-400 mb-4">
-              This is a mocked deposit. Funds will be credited instantly.
+              {locale === "sr" 
+                ? "Ovo je simulirana uplata. Sredstva će biti uplaćena odmah."
+                : "This is a mocked deposit. Funds will be credited instantly."}
             </p>
 
             <form onSubmit={handleDeposit} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-400 mb-1">
-                  Amount (USD)
+                  {t("amount")} (USD)
                 </label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
@@ -323,7 +335,7 @@ export default function WalletPage() {
                   onClick={() => setShowDepositModal(false)}
                   className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors"
                 >
-                  Cancel
+                  {tCommon("cancel")}
                 </button>
                 <button
                   type="submit"
@@ -331,7 +343,7 @@ export default function WalletPage() {
                   className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-600/50 text-white rounded-lg font-medium transition-colors"
                 >
                   {processing && <Loader2 className="h-4 w-4 animate-spin" />}
-                  Deposit
+                  {t("deposit")}
                 </button>
               </div>
             </form>
@@ -344,7 +356,7 @@ export default function WalletPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 w-full max-w-md mx-4">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-white">Withdraw Funds</h2>
+              <h2 className="text-xl font-bold text-white">{t("withdrawFunds")}</h2>
               <button
                 onClick={() => setShowWithdrawModal(false)}
                 className="p-1 text-gray-400 hover:text-white"
@@ -354,16 +366,16 @@ export default function WalletPage() {
             </div>
             
             <p className="text-sm text-gray-400 mb-2">
-              Available to withdraw: <span className="text-emerald-400 font-medium">${availableBalance.toFixed(2)}</span>
+              {locale === "sr" ? "Dostupno za isplatu" : "Available to withdraw"}: <span className="text-emerald-400 font-medium">${availableBalance.toFixed(2)}</span>
             </p>
             <p className="text-xs text-gray-500 mb-4">
-              Minimum withdrawal: $10.00
+              {locale === "sr" ? "Minimalna isplata: $10.00" : "Minimum withdrawal: $10.00"}
             </p>
 
             <form onSubmit={handleWithdraw} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-400 mb-1">
-                  Amount (USD)
+                  {t("amount")} (USD)
                 </label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
@@ -419,7 +431,7 @@ export default function WalletPage() {
                   onClick={() => setShowWithdrawModal(false)}
                   className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors"
                 >
-                  Cancel
+                  {tCommon("cancel")}
                 </button>
                 <button
                   type="submit"
@@ -427,7 +439,7 @@ export default function WalletPage() {
                   className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-600/50 text-white rounded-lg font-medium transition-colors"
                 >
                   {processing && <Loader2 className="h-4 w-4 animate-spin" />}
-                  Withdraw
+                  {t("withdraw")}
                 </button>
               </div>
             </form>

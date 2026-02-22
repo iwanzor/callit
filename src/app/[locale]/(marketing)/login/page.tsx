@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
+import { useTranslations, useLocale } from "next-intl";
+import { Link } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,6 +12,9 @@ import { TrendingUp, Loader2, AlertCircle } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
+  const locale = useLocale();
+  const t = useTranslations("auth");
+  
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -31,7 +35,7 @@ export default function LoginPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || "Login failed");
+        setError(data.error || t("loginFailed"));
         setIsLoading(false);
         return;
       }
@@ -41,10 +45,10 @@ export default function LoginPage() {
       localStorage.setItem("refreshToken", data.refreshToken);
       localStorage.setItem("user", JSON.stringify(data.user));
 
-      // Redirect to markets
-      router.push("/markets");
+      // Redirect to markets with locale
+      router.push(`/${locale}/markets`);
     } catch {
-      setError("Something went wrong. Please try again.");
+      setError(t("loginFailed"));
       setIsLoading(false);
     }
   };
@@ -58,9 +62,9 @@ export default function LoginPage() {
               <TrendingUp className="w-7 h-7 text-white" />
             </div>
           </div>
-          <CardTitle className="text-2xl">Welcome back</CardTitle>
+          <CardTitle className="text-2xl">{t("welcomeBack")}</CardTitle>
           <CardDescription>
-            Sign in to your account to continue trading
+            {t("signInSubtitle")}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -73,11 +77,11 @@ export default function LoginPage() {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t("email")}</Label>
               <Input
                 id="email"
                 type="email"
-                placeholder="you@example.com"
+                placeholder={t("emailPlaceholder")}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -87,18 +91,18 @@ export default function LoginPage() {
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">{t("password")}</Label>
                 <Link
                   href="#"
                   className="text-sm text-emerald-500 hover:text-emerald-400"
                 >
-                  Forgot password?
+                  {t("forgotPassword")}
                 </Link>
               </div>
               <Input
                 id="password"
                 type="password"
-                placeholder="••••••••"
+                placeholder={t("passwordPlaceholder")}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -114,21 +118,21 @@ export default function LoginPage() {
               {isLoading ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Signing in...
+                  {t("signingIn")}
                 </>
               ) : (
-                "Sign in"
+                t("signIn")
               )}
             </Button>
           </form>
 
           <div className="mt-6 text-center text-sm text-muted-foreground">
-            Don&apos;t have an account?{" "}
+            {t("noAccount")}{" "}
             <Link
               href="/register"
               className="text-emerald-500 hover:text-emerald-400 font-medium"
             >
-              Create one
+              {t("createOne")}
             </Link>
           </div>
         </CardContent>
