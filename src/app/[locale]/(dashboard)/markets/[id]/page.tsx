@@ -78,15 +78,17 @@ export default function MarketDetailPage({
 
     try {
       const quantity = parseFloat(shares);
+      // Convert cents (1-99) to decimal (0.01-0.99)
+      const priceInCents = parseFloat(price);
       const orderPrice = orderType === "limit" 
-        ? parseFloat(price) || (tradeTab === "yes" ? market.yesPrice : market.noPrice)
+        ? (priceInCents ? priceInCents / 100 : (tradeTab === "yes" ? market.yesPrice : market.noPrice))
         : undefined;
 
       if (quantity <= 0) {
         throw new Error(t("enterValidQuantity"));
       }
 
-      if (orderType === "limit" && orderPrice && (orderPrice < 0.01 || orderPrice > 0.99)) {
+      if (orderType === "limit" && priceInCents && (priceInCents < 1 || priceInCents > 99)) {
         throw new Error(t("priceRange1to99"));
       }
 

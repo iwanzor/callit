@@ -244,7 +244,7 @@
     "marketResolved": "This market has been resolved",
     "marketNotOpen": "This market is not open for trading",
     "enterValidQuantity": "Please enter a valid quantity",
-    "priceRange1to99": "Price must be between 0.01 and 0.99",
+    "priceRange1to99": "Price must be between 1¢ and 99¢",
     "tradesExecuted": "trade(s) executed"
   }
 }

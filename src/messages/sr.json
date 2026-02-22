@@ -201,7 +201,7 @@
     "bestBid": "Najbolja ponuda",
     "bestAsk": "Najbolja potražnja",
     "price": "Cena",
-    "priceRange": "Opseg: 1¢ - 99¢",
+    "priceRange": "Opseg: 1 - 99",
     "quantity": "Količina",
     "shares": "Akcije",
     "sharesCount": "akcija",
@@ -244,7 +244,7 @@
     "marketResolved": "Ovo tržište je razrešeno",
     "marketNotOpen": "Ovo tržište nije otvoreno za trgovanje",
     "enterValidQuantity": "Molimo unesite validnu količinu",
-    "priceRange1to99": "Cena mora biti između 0.01 i 0.99",
+    "priceRange1to99": "Cena mora biti između 1 i 99",
     "tradesExecuted": "trgovina izvršeno"
   }
 }
