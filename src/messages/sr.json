@@ -206,5 +206,33 @@
   "language": {
     "en": "English",
     "sr": "Srpski"
+  },
+  "trading": {
+    "title": "Trgovanje",
+    "buyYes": "Kupi DA",
+    "buyNo": "Kupi NE",
+    "limit": "Limit",
+    "market": "Tržišni",
+    "bestBid": "Najbolja ponuda",
+    "bestAsk": "Najbolja potražnja",
+    "price": "Cena",
+    "priceRange": "Opseg: 1¢ - 99¢",
+    "shares": "Akcije",
+    "maxCost": "Maks. cena",
+    "potentialReturn": "Potencijalni povrat",
+    "potentialProfit": "Potencijalni profit",
+    "insufficientBalance": "Nedovoljan balans",
+    "available": "dostupno",
+    "placeOrder": "Postavi nalog",
+    "orderBook": "Knjiga naloga",
+    "refresh": "Osveži",
+    "backToMarkets": "Nazad na tržišta",
+    "priceHistory": "Istorija cena",
+    "resolutionCriteria": "Kriterijum razrešenja",
+    "closes": "Zatvara se",
+    "loading": "Učitavanje...",
+    "error": "Greška pri učitavanju",
+    "orderPlaced": "Nalog uspešno postavljen!",
+    "orderFailed": "Nalog nije uspeo"
   }
 }

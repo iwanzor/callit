@@ -55,6 +55,16 @@ const fetcher = async (url: string) => {
   return res.json();
 };
 
+// Auth fetcher for protected routes
+const authFetcher = async (url: string) => {
+  const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
+  const res = await fetch(url, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) throw new Error("Failed to fetch");
+  return res.json();
+};
+
 /**
  * Hook for real-time market data using SWR polling
  * Polls every 2 seconds for live updates
@@ -150,7 +160,7 @@ export function useMarketsList(enabled = true) {
 export function useUserBalance(enabled = true) {
   const { data, error, isLoading, mutate } = useSWR<{ balance: number; frozenBalance: number }>(
     enabled ? "/api/user/balance" : null,
-    fetcher,
+    authFetcher,
     {
       refreshInterval: 5000, // Poll every 5 seconds
       revalidateOnFocus: true,

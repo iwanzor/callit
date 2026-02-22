@@ -206,5 +206,33 @@
   "language": {
     "en": "English",
     "sr": "Srpski"
+  },
+  "trading": {
+    "title": "Trade",
+    "buyYes": "Buy YES",
+    "buyNo": "Buy NO",
+    "limit": "Limit",
+    "market": "Market",
+    "bestBid": "Best Bid",
+    "bestAsk": "Best Ask",
+    "price": "Price",
+    "priceRange": "Range: 1¢ - 99¢",
+    "shares": "Shares",
+    "maxCost": "Max Cost",
+    "potentialReturn": "Potential Return",
+    "potentialProfit": "Potential profit",
+    "insufficientBalance": "Insufficient balance",
+    "available": "available",
+    "placeOrder": "Place Order",
+    "orderBook": "Order Book",
+    "refresh": "Refresh",
+    "backToMarkets": "Back to Markets",
+    "priceHistory": "Price History",
+    "resolutionCriteria": "Resolution Criteria",
+    "closes": "Closes",
+    "loading": "Loading...",
+    "error": "Error loading data",
+    "orderPlaced": "Order placed successfully!",
+    "orderFailed": "Order failed"
   }
 }
