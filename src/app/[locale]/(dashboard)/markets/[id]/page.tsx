@@ -86,9 +86,13 @@ export default function MarketDetailPage({
         throw new Error("Price must be between 0.01 and 0.99");
       }
 
+      const token = localStorage.getItem("accessToken");
       const res = await fetch("/api/orders", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({
           marketId: id,
           side: tradeTab,
@@ -555,7 +559,7 @@ export default function MarketDetailPage({
                       Placing Order...
                     </span>
                   ) : (
-                    `Buy ${tradeTab.toUpperCase()} @ ${orderType === "market" ? "Market" : `${parseFloat(price || String(currentPrice * 100)).toFixed(0)}¢`}`
+                    `Buy ${tradeTab.toUpperCase()} @ ${(currentPrice * 100).toFixed(0)}¢`
                   )}
                 </button>
 
