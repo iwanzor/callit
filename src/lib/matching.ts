@@ -1,6 +1,28 @@
-import { db, orders, trades, positions, transactions, users, markets } from "./db";
+import { db, orders, trades, positions, transactions, users, markets, priceHistory } from "./db";
 import { eq, and, sql, asc, desc, or, ne } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
+
+/**
+ * Record a price point to the price_history table
+ * Called after trades are executed to track price changes over time
+ */
+export async function recordPriceHistory(
+  marketId: string,
+  yesPrice: number,
+  volume: number
+): Promise<void> {
+  try {
+    await db.insert(priceHistory).values({
+      marketId,
+      yesPrice: yesPrice.toFixed(2),
+      volume: volume.toFixed(2),
+      timestamp: new Date(),
+    });
+  } catch (error) {
+    // Log but don't throw - price history recording shouldn't break trading
+    console.error("Failed to record price history:", error);
+  }
+}
 
 export interface MatchResult {
   orderId: string;
@@ -249,14 +271,23 @@ export async function matchOrder(
     if (executedTrades.length > 0) {
       const lastTradePrice = executedTrades[executedTrades.length - 1].price;
       const totalVolume = executedTrades.reduce((sum, t) => sum + t.price * t.quantity, 0);
+      const newYesPrice = side === "yes" ? lastTradePrice : (1 - lastTradePrice);
 
       await tx
         .update(markets)
         .set({
-          yesPrice: side === "yes" ? lastTradePrice.toFixed(2) : (1 - lastTradePrice).toFixed(2),
+          yesPrice: newYesPrice.toFixed(2),
           totalVolume: sql`${markets.totalVolume} + ${totalVolume.toFixed(2)}`,
         })
         .where(eq(markets.id, marketId));
+
+      // Record price history for charting
+      await tx.insert(priceHistory).values({
+        marketId,
+        yesPrice: newYesPrice.toFixed(2),
+        volume: totalVolume.toFixed(2),
+        timestamp: new Date(),
+      });
     }
   });
 

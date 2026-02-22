@@ -8,31 +8,115 @@ import {
   Zap,
   Wallet,
   ChevronRight,
+  Clock,
+  Flame,
+  CheckCircle,
+  XCircle,
 } from "lucide-react";
 
-const featuredMarkets = [
-  {
-    id: 1,
-    question: "Will Bitcoin exceed $150,000 by end of 2026?",
-    yesPrice: 0.42,
-    volume: "$2.4M",
-    category: "Crypto",
-  },
-  {
-    id: 2,
-    question: "Will the Fed cut rates before July 2026?",
-    yesPrice: 0.68,
-    volume: "$890K",
-    category: "Economy",
-  },
-  {
-    id: 3,
-    question: "Will SpaceX complete a Mars mission by 2030?",
-    yesPrice: 0.31,
-    volume: "$1.2M",
-    category: "Science",
-  },
-];
+// Types
+interface Market {
+  id: string;
+  slug: string;
+  title: string;
+  description: string | null;
+  category: string | null;
+  status: string;
+  resolution: string | null;
+  yesPrice: number;
+  noPrice: number;
+  totalVolume: number;
+  closeAt: string | null;
+  imageUrl: string | null;
+  createdAt: string;
+}
+
+interface MarketsResponse {
+  markets: Market[];
+  pagination: {
+    total: number;
+    limit: number;
+    offset: number;
+    hasMore: boolean;
+  };
+}
+
+// Server-side data fetching
+async function getMarkets(status = "open", limit = 6, sortBy = "volume"): Promise<MarketsResponse> {
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  try {
+    const res = await fetch(
+      `${baseUrl}/api/markets?status=${status}&limit=${limit}&sortBy=${sortBy}&sortOrder=desc`,
+      { next: { revalidate: 60 } }
+    );
+    if (!res.ok) throw new Error("Failed to fetch markets");
+    return res.json();
+  } catch (error) {
+    console.error("Error fetching markets:", error);
+    return { markets: [], pagination: { total: 0, limit, offset: 0, hasMore: false } };
+  }
+}
+
+async function getResolvedMarkets(): Promise<MarketsResponse> {
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  try {
+    const res = await fetch(
+      `${baseUrl}/api/markets?status=resolved&limit=3&sortBy=createdAt&sortOrder=desc`,
+      { next: { revalidate: 60 } }
+    );
+    if (!res.ok) throw new Error("Failed to fetch resolved markets");
+    return res.json();
+  } catch (error) {
+    console.error("Error fetching resolved markets:", error);
+    return { markets: [], pagination: { total: 0, limit: 3, offset: 0, hasMore: false } };
+  }
+}
+
+// Format volume
+function formatVolume(volume: number): string {
+  if (volume >= 1000000) return `$${(volume / 1000000).toFixed(1)}M`;
+  if (volume >= 1000) return `$${(volume / 1000).toFixed(0)}K`;
+  return `$${volume.toFixed(0)}`;
+}
+
+// Format time remaining
+function formatTimeRemaining(closeAt: string | null): string {
+  if (!closeAt) return "No end date";
+  const close = new Date(closeAt);
+  const now = new Date();
+  const diff = close.getTime() - now.getTime();
+  
+  if (diff < 0) return "Ended";
+  
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const months = Math.floor(days / 30);
+  const years = Math.floor(days / 365);
+  
+  if (years > 0) return `${years}y ${months % 12}mo`;
+  if (months > 0) return `${months}mo ${days % 30}d`;
+  if (days > 0) return `${days}d`;
+  
+  const hours = Math.floor(diff / (1000 * 60 * 60));
+  return `${hours}h`;
+}
+
+// Check if market is trending
+function isTrending(volume: number): boolean {
+  return volume >= 1000000;
+}
+
+// Category colors
+function getCategoryColor(category: string | null): string {
+  const colors: Record<string, string> = {
+    politics: "bg-blue-500/10 text-blue-400 border-blue-500/30",
+    crypto: "bg-orange-500/10 text-orange-400 border-orange-500/30",
+    sports: "bg-green-500/10 text-green-400 border-green-500/30",
+    economy: "bg-purple-500/10 text-purple-400 border-purple-500/30",
+    entertainment: "bg-pink-500/10 text-pink-400 border-pink-500/30",
+    science: "bg-cyan-500/10 text-cyan-400 border-cyan-500/30",
+  };
+  return colors[category || ""] || "bg-muted text-muted-foreground border-border";
+}
 
 const steps = [
   {
@@ -55,7 +139,123 @@ const steps = [
   },
 ];
 
-export default function LandingPage() {
+// Market Card Component
+function MarketCard({ market }: { market: Market }) {
+  const yesPercent = Math.round(market.yesPrice * 100);
+  const noPercent = Math.round(market.noPrice * 100);
+  const trending = isTrending(market.totalVolume);
+
+  return (
+    <Link href={`/markets/${market.id}`}>
+      <Card className="bg-card border-border/50 hover:border-emerald-500/50 transition-colors cursor-pointer group h-full">
+        <CardContent className="p-6">
+          <div className="flex items-center gap-2 mb-3 flex-wrap">
+            <span className={`px-2 py-1 rounded-md text-xs font-medium border ${getCategoryColor(market.category)}`}>
+              {market.category?.charAt(0).toUpperCase()}{market.category?.slice(1)}
+            </span>
+            {trending && (
+              <span className="px-2 py-1 rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/30 text-xs font-medium flex items-center gap-1">
+                <Flame className="w-3 h-3" />
+                Trending
+              </span>
+            )}
+            <span className="text-xs text-muted-foreground ml-auto flex items-center gap-1">
+              <Clock className="w-3 h-3" />
+              {formatTimeRemaining(market.closeAt)}
+            </span>
+          </div>
+
+          <h3 className="font-semibold mb-4 group-hover:text-emerald-500 transition-colors line-clamp-2 min-h-[3rem]">
+            {market.title}
+          </h3>
+
+          <div className="mb-4">
+            <div className="flex justify-between text-xs mb-1">
+              <span className="text-muted-foreground">Probability</span>
+              <span className="font-medium">{formatVolume(market.totalVolume)} vol</span>
+            </div>
+            <div className="h-2 bg-muted rounded-full overflow-hidden flex">
+              <div 
+                className="bg-emerald-500 transition-all"
+                style={{ width: `${yesPercent}%` }}
+              />
+              <div 
+                className="bg-red-500 transition-all"
+                style={{ width: `${noPercent}%` }}
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <Button
+              size="sm"
+              className={`flex-1 ${
+                yesPercent >= 50 
+                  ? "bg-emerald-600/30 hover:bg-emerald-600/40 text-emerald-400 border border-emerald-500/40"
+                  : "bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/30"
+              }`}
+            >
+              YES {yesPercent}¢
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className={`flex-1 ${
+                noPercent >= 50
+                  ? "border-red-500/40 text-red-400 hover:bg-red-600/20 bg-red-600/10"
+                  : "border-red-500/30 text-red-400 hover:bg-red-600/10"
+              }`}
+            >
+              NO {noPercent}¢
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </Link>
+  );
+}
+
+// Resolved Market Card
+function ResolvedMarketCard({ market }: { market: Market }) {
+  const isYes = market.resolution === "yes";
+
+  return (
+    <Card className="bg-card/50 border-border/50">
+      <CardContent className="p-4">
+        <div className="flex items-start gap-3">
+          <div className={`p-2 rounded-full ${isYes ? "bg-emerald-500/20" : "bg-red-500/20"}`}>
+            {isYes ? (
+              <CheckCircle className="w-5 h-5 text-emerald-500" />
+            ) : (
+              <XCircle className="w-5 h-5 text-red-500" />
+            )}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-medium text-sm line-clamp-2">{market.title}</p>
+            <div className="flex items-center gap-2 mt-1">
+              <span className={`text-xs font-semibold ${isYes ? "text-emerald-400" : "text-red-400"}`}>
+                Resolved {isYes ? "YES" : "NO"}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                • {formatVolume(market.totalVolume)} volume
+              </span>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+export default async function LandingPage() {
+  const [marketsData, resolvedData] = await Promise.all([
+    getMarkets("open", 3, "volume"),
+    getResolvedMarkets(),
+  ]);
+
+  const totalVolume = marketsData.markets.reduce((sum, m) => sum + m.totalVolume, 0) + 
+                      resolvedData.markets.reduce((sum, m) => sum + m.totalVolume, 0);
+
   return (
     <div className="flex flex-col">
       {/* Hero Section */}
@@ -107,7 +307,7 @@ export default function LandingPage() {
             <div className="grid grid-cols-3 gap-8 mt-16 pt-8 border-t border-border/40">
               <div>
                 <div className="text-2xl md:text-3xl font-bold text-emerald-500">
-                  $50M+
+                  {formatVolume(totalVolume > 0 ? totalVolume : 15000000)}+
                 </div>
                 <div className="text-sm text-muted-foreground">
                   Trading Volume
@@ -115,7 +315,7 @@ export default function LandingPage() {
               </div>
               <div>
                 <div className="text-2xl md:text-3xl font-bold text-emerald-500">
-                  100K+
+                  10K+
                 </div>
                 <div className="text-sm text-muted-foreground">
                   Active Traders
@@ -123,7 +323,7 @@ export default function LandingPage() {
               </div>
               <div>
                 <div className="text-2xl md:text-3xl font-bold text-emerald-500">
-                  5,000+
+                  {marketsData.pagination.total || 20}+
                 </div>
                 <div className="text-sm text-muted-foreground">
                   Live Markets
@@ -173,7 +373,11 @@ export default function LandingPage() {
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between mb-8">
             <div>
-              <h2 className="text-3xl md:text-4xl font-bold mb-2">
+              <h2 className="text-3xl md:text-4xl font-bold mb-2 flex items-center gap-3">
+                <span className="relative flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                </span>
                 Featured Markets
               </h2>
               <p className="text-muted-foreground">
@@ -188,43 +392,20 @@ export default function LandingPage() {
             </Link>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-6">
-            {featuredMarkets.map((market) => (
-              <Card
-                key={market.id}
-                className="bg-card border-border/50 hover:border-emerald-500/50 transition-colors cursor-pointer group"
-              >
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="text-xs px-2 py-1 rounded-full bg-muted text-muted-foreground">
-                      {market.category}
-                    </span>
-                    <span className="text-xs text-muted-foreground ml-auto">
-                      Vol: {market.volume}
-                    </span>
-                  </div>
-                  <h3 className="font-semibold mb-4 group-hover:text-emerald-500 transition-colors">
-                    {market.question}
-                  </h3>
-                  <div className="flex items-center gap-3">
-                    <Button
-                      size="sm"
-                      className="flex-1 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-500 border border-emerald-500/30"
-                    >
-                      YES {Math.round(market.yesPrice * 100)}¢
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="flex-1 border-red-500/30 text-red-400 hover:bg-red-500/10"
-                    >
-                      NO {Math.round((1 - market.yesPrice) * 100)}¢
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          {marketsData.markets.length > 0 ? (
+            <div className="grid md:grid-cols-3 gap-6">
+              {marketsData.markets.map((market) => (
+                <MarketCard key={market.id} market={market} />
+              ))}
+            </div>
+          ) : (
+            <Card className="bg-card/50 border-border/50">
+              <CardContent className="py-12 text-center">
+                <TrendingUp className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                <p className="text-muted-foreground">No active markets yet. Check back soon!</p>
+              </CardContent>
+            </Card>
+          )}
 
           <div className="mt-8 text-center sm:hidden">
             <Link href="/markets">
@@ -236,6 +417,32 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      {/* Resolved Markets */}
+      {resolvedData.markets.length > 0 && (
+        <section className="py-12 bg-muted/20 border-y border-border/40">
+          <div className="container mx-auto px-4">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold flex items-center gap-2">
+                <CheckCircle className="w-5 h-5 text-emerald-500" />
+                Recent Results
+              </h2>
+              <Link href="/markets?status=resolved">
+                <Button variant="ghost" size="sm" className="gap-1 text-muted-foreground hover:text-foreground">
+                  See all
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </Link>
+            </div>
+
+            <div className="grid md:grid-cols-3 gap-4">
+              {resolvedData.markets.map((market) => (
+                <ResolvedMarketCard key={market.id} market={market} />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* CTA Section */}
       <section className="py-20 bg-gradient-to-b from-background to-emerald-950/20">
